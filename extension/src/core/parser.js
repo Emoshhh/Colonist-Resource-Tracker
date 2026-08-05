@@ -10,30 +10,60 @@
 
 import { imageToResource, isHiddenCardImage, isDevCardImage, normalizeImageName, toVector } from './resources.js';
 
+/**
+ * Colonist log metinleri. Arayüz metni değişirse tek düzeltme noktası burasıdır.
+ * Not: güncel colonist iki nokta kullanmıyor ("Emosh got 🌲"), eski sürümler
+ * kullanıyordu ("Emosh got: 🌲"); ikisi de desteklenir.
+ */
 export const SNIPPETS = {
   setupDone: ['giving out starting resources'],
-  placeInitial: ['turn to place'],
-  got: ['got:', 'received:'],
+  startingResources: ['received starting resources'],
+  got: ['got'],
   discarded: ['discarded'],
-  yearOfPlenty: ['took from bank:', 'took from bank'],
-  bankGave: ['gave bank:', 'gave bank'],
+  yearOfPlenty: ['took from bank'],
+  bankGave: ['gave bank'],
   bankTook: ['and took'],
-  tradeGiveStart: ['wants to give:', 'gave:', 'traded:'],
-  tradeBoundary: ['for:', 'and got:'],
-  monopoly: ['stole all of', 'used monopoly', 'monopoly'],
+  tradeGiveStart: ['wants to give', 'gave', 'traded'],
+  tradeBoundary: ['and got', 'for'],
+  monopoly: ['stole all of', 'monopoly'],
   stole: ['stole'],
-  from: ['from'],
   bought: ['bought'],
-  built: ['built a', 'built'],
-  placed: ['placed a', 'placed'],
+  built: ['built'],
+  placed: ['placed'],
   used: ['used'],
+  ignore: ['wants to give', 'is trading', 'moved robber', 'turn to place', 'rolled', 'won the game'],
 };
 
-const BUILD_IMAGES = {
-  road: 'road',
-  settlement: 'settlement',
-  city: 'city',
-};
+/** İkon adları oyuncu rengine göre değişebildiği için parça eşleme yapılır. */
+const BUILD_IMAGE_PATTERNS = [
+  ['city', 'city'],
+  ['settlement', 'settlement'],
+  ['road', 'road'],
+];
+
+function buildItemFrom(images) {
+  for (const img of images) {
+    for (const [needle, item] of BUILD_IMAGE_PATTERNS) {
+      if (img.includes(needle)) return item;
+    }
+  }
+  return null;
+}
+
+/** Güncel colonist yapıyı metinde yazıyor: "placed a Settlement". */
+function buildItemFromText(text) {
+  if (text.includes('city')) return 'city';
+  if (text.includes('settlement')) return 'settlement';
+  if (text.includes('road')) return 'road';
+  return null;
+}
+
+/** Oyuncu adının bittiği yeri belirleyen fiiller. */
+const ACTOR_VERB_RE =
+  /\b(placed|received|rolled|got|built|bought|traded|gave|took|stole|discarded|used|moved|wants|is trading)\b/i;
+
+/** İkinci oyuncu: "... from Lili" / "... traded with: Lili" */
+const SECOND_PLAYER_RE = /\b(?:from|with)\b:?\s+(.+?)\s*$/i;
 
 const DEV_PLAY_IMAGES = {
   card_knight: 'knight',
@@ -105,10 +135,11 @@ export function playersIn(parts, known = []) {
   if (tagged.length) return tagged;
 
   const text = flatText(parts);
+
+  // 1) Bilinen isimleri metinde ara (boşluklu adlar için de çalışır)
   const found = [];
-  const sorted = [...known].sort((a, b) => b.length - a.length);
   const used = [];
-  for (const name of sorted) {
+  for (const name of [...known].sort((a, b) => b.length - a.length)) {
     let at = -1;
     while ((at = text.indexOf(name, at + 1)) >= 0) {
       if (used.some(([s, e]) => at < e && at + name.length > s)) continue;
@@ -116,7 +147,24 @@ export function playersIn(parts, known = []) {
       found.push([at, name]);
     }
   }
-  return found.sort((a, b) => a[0] - b[0]).map(([, name]) => name);
+  if (found.length) return found.sort((a, b) => a[0] - b[0]).map(([, name]) => name);
+
+  // 2) Hiç bilinen isim yoksa yapıdan çıkar: fiilden önceki kısım = oyuncu,
+  //    "from/with"ten sonraki kısım = karşı taraf.
+  const names = [];
+  const verb = text.match(ACTOR_VERB_RE);
+  if (verb && verb.index > 0) {
+    const actor = text.slice(0, verb.index).trim().replace(/[:•\-–]$/, '').trim();
+    if (actor && actor.length <= 32) names.push(actor);
+  }
+  const second = text.match(SECOND_PLAYER_RE);
+  if (second) {
+    const other = second[1].trim().replace(/[.:!]$/, '').trim();
+    if (other && other.length <= 32 && other !== names[0] && !ACTOR_VERB_RE.test(other)) {
+      names.push(other);
+    }
+  }
+  return names;
 }
 
 function firstNumber(text) {
@@ -148,9 +196,18 @@ export function parseMessage(parts, ctx = {}) {
   // 2) Kurulum bitti işareti
   if (has(parts, SNIPPETS.setupDone)) return { kind: 'setupDone' };
 
+  // 2b) Başlangıç kaynakları ("received starting resources")
+  if (has(parts, SNIPPETS.startingResources)) {
+    const at = findMarker(parts, SNIPPETS.startingResources);
+    const { obj } = resourcesFrom(imagesIn(parts, at + 1));
+    if (actor && Object.keys(obj).length) {
+      return { kind: 'gain', player: actor, res: obj, reason: 'starting' };
+    }
+  }
+
   // 3) Tekel (içinde "stole" geçtiği için hırsızlıktan önce bakılmalı)
-  const monopolyCard = images.some((i) => i === 'card_monopoly' || i === 'monopoly');
-  if (has(parts, SNIPPETS.monopoly) || monopolyCard) {
+  const monopolyCard = images.some((i) => i.includes('monopoly'));
+  if (has(parts, SNIPPETS.monopoly) || monopolyCard || /stole \d+/.test(text)) {
     const { obj } = resourcesFrom(images);
     const res = Object.keys(obj)[0] || null;
     if (actor && res) {
@@ -237,6 +294,7 @@ export function parseMessage(parts, ctx = {}) {
         victim = ctx.me;
       }
     }
+    if (victim && /all players|all of/i.test(victim)) victim = null;
     if (thief && victim && thief !== victim) {
       if (res && !hidden) return { kind: 'stealKnown', thief, victim, res };
       return { kind: 'stealUnknown', thief, victim };
@@ -252,23 +310,30 @@ export function parseMessage(parts, ctx = {}) {
   if (has(parts, SNIPPETS.used)) {
     const played = images.map((i) => DEV_PLAY_IMAGES[i]).find(Boolean);
     if (actor && played) return { kind: 'playDev', player: actor, card: played };
-    if (actor && text.includes('road building')) return { kind: 'playDev', player: actor, card: 'roadbuilding' };
+    for (const [needle, card] of [
+      ['road building', 'roadbuilding'],
+      ['year of plenty', 'yearofplenty'],
+      ['knight', 'knight'],
+      ['monopoly', 'monopoly'],
+    ]) {
+      if (actor && text.includes(needle)) return { kind: 'playDev', player: actor, card };
+    }
   }
 
   // 12) İnşa (maliyetli)
   if (has(parts, SNIPPETS.built)) {
-    const item = images.map((i) => BUILD_IMAGES[i]).find(Boolean);
+    const item = buildItemFrom(images) || buildItemFromText(text);
     if (actor && item) return { kind: 'build', player: actor, item };
   }
 
-  // 13) Yerleştirme (kurulum / yol yapımı — bedava)
+  // 13) Yerleştirme — kurulumda bedava, oyun içinde inşa sayılır (game.js karar verir)
   if (has(parts, SNIPPETS.placed)) {
-    const item = images.map((i) => BUILD_IMAGES[i]).find(Boolean);
+    const item = buildItemFrom(images) || buildItemFromText(text);
     if (actor && item) return { kind: 'place', player: actor, item };
   }
 
   // 14) Teklif satırları vb. — bilinçli olarak yok sayılır
-  if (has(parts, ['wants to give', 'is trading', 'rolled', 'moved robber', 'turn to place', 'placed'])) {
+  if (has(parts, SNIPPETS.ignore)) {
     return { kind: 'ignore', player: actor };
   }
 

@@ -139,6 +139,13 @@
   color: #b28dff;
 }
 
+#colonist-tracker .ct-empty {
+  padding: 10px 4px;
+  color: #8e9aa8;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 #colonist-tracker .ct-warn {
   margin-top: 6px;
   padding: 4px 6px;

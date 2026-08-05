@@ -89,8 +89,11 @@ export class Game {
         t.devCardPlayed(ev.player);
         break;
 
-      case 'build': {
-        if (this.setupPhase) break; // kurulum yerleşimleri bedava
+      // Colonist hem "built a City" hem "placed a Road" yazabiliyor;
+      // ikisi de aynı kuralla işlenir: kurulumda ve yol yapımı kartında bedava.
+      case 'build':
+      case 'place': {
+        if (this.setupPhase) break;
         if (ev.item === 'road' && this.freeRoads > 0) {
           this.freeRoads -= 1;
           break;
@@ -99,11 +102,6 @@ export class Game {
         if (cost) t.lose(ev.player, toVector(cost));
         break;
       }
-
-      case 'place':
-        // kurulum yerleşimi veya yol yapımı kartı — bedava
-        if (ev.item === 'road' && this.freeRoads > 0) this.freeRoads -= 1;
-        break;
 
       case 'unknown':
         if (ev.text) {

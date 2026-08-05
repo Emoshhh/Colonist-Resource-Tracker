@@ -152,6 +152,7 @@ export class Overlay {
   }
 
   setStatus(state) {
+    this.status = state;
     if (!this.statusEl) return;
     const map = {
       connected: ['#48c774', 'Log’a bağlandı'],
@@ -200,6 +201,19 @@ export class Overlay {
     head.appendChild(el('th', 'ct-th', 'Σ'));
     head.appendChild(el('th', 'ct-th', 'GK'));
     table.appendChild(head);
+
+    if (!report.players.length) {
+      const tr = el('tr', 'ct-row');
+      const td = el('td', 'ct-td ct-empty');
+      td.colSpan = 8;
+      td.textContent =
+        this.status === 'connected'
+          ? 'Log’a bağlandı, ilk hamle bekleniyor…'
+          : 'Oyun log’u bulunamadı — bir oyuna gir, sonra ⟲’ye bas';
+      tr.appendChild(td);
+      table.appendChild(tr);
+      return;
+    }
 
     report.players.forEach((player) => {
       const tr = el('tr', 'ct-row');

@@ -57,16 +57,26 @@ Firefox için `about:debugging` → "Bu Firefox" → "Geçici Eklenti Yükle" �
 
 Başlık çubuğundan sürükleyerek taşıyabilirsin; konum ve durum `localStorage`'da saklanır.
 
+## Gerçek log'a nasıl bakılır
+
+Panel "Oyun log'u bulunamadı" diyorsa ya da satırları tanımıyorsa, ham log'u görmek gerekir:
+
+**Yol 1 — panelden:** ⧉ düğmesi. Tanınmayan satırları + son 25 log satırının ham HTML'ini
+hem panoya kopyalar hem konsola basar.
+
+**Yol 2 — konsoldan (eklenti çalışmasa da olur):** oyundayken `F12` → **Console** sekmesi
+(Sources değil), `tools/dump-log.js` dosyasının içeriğini yapıştır, Enter. Sonra `copy(__ctDump)`
+yazıp Enter'a bas — döküm panoda olur.
+
 ## Colonist metinleri değişirse
 
 Eklenti log satırlarını metin kalıplarıyla tanır. Colonist arayüz metinlerini değiştirirse
-panelde `⚠ N satır tanınmadı` uyarısı çıkar. O durumda:
+panelde `⚠ N satır tanınmadı` uyarısı çıkar. O durumda dökümü al ve
+`extension/src/core/parser.js` içindeki `SNIPPETS` tablosuna yeni kalıbı ekle.
 
-1. ⧉ düğmesiyle dökümü kopyala.
-2. `extension/src/core/parser.js` içindeki `SNIPPETS` tablosuna yeni kalıbı ekle.
-
-Tüm ayrıştırma kuralları tek yerde toplanmıştır; DOM seçicileri de
-`extension/src/dom/log-reader.js` içindeki `LOG_SELECTORS` listesindedir.
+Log kutusu ise önce bilinen seçicilerle (`LOG_SELECTORS`), bulunamazsa **içeriğe bakılarak**
+aranır: "rolled / got / placed a / gave ..." gibi satırları en çok barındıran en dar eleman
+seçilir. Yani colonist id ve class isimlerini değiştirse bile panel çalışmaya devam eder.
 
 `⚠ N log satırı hesapla çelişti` uyarısı ise bir hamlenin mevcut duruma göre imkânsız olduğunu
 söyler (genelde tanınmayan bir satır yüzünden). Bu durumda motor durumu bozmaz, son geçerli

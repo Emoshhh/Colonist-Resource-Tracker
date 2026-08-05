@@ -16,22 +16,23 @@ let pendingRender = false;
 const overlay = new Overlay({
   onReset: () => {
     game = new Game();
-    watcher.seen = new WeakSet();
-    watcher.flush();
+    watcher.rescan();
     scheduleRender();
   },
   onCopyDebug: () => {
     const payload = [
-      '--- tanınmayan satırlar ---',
+      `--- tanınmayan satırlar (${game.unknownMessages.length}) ---`,
       ...game.unknownMessages,
       '',
       '--- ham log (HTML) ---',
       watcher.dump(),
     ].join('\n');
+    // Pano çalışmazsa diye konsola da bas.
+    console.log('[colonist-tracker] hata ayıklama dökümü:\n' + payload);
     navigator.clipboard
       .writeText(payload)
-      .then(() => console.log('[colonist-tracker] hata ayıklama dökümü panoya kopyalandı'))
-      .catch((err) => console.warn('[colonist-tracker] kopyalama başarısız', err));
+      .then(() => console.log('[colonist-tracker] döküm panoya kopyalandı'))
+      .catch((err) => console.warn('[colonist-tracker] panoya kopyalanamadı', err));
   },
 });
 
