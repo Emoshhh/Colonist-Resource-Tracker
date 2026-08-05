@@ -187,10 +187,12 @@ export function parseMessage(parts, ctx = {}) {
   const actor = names[0] || null;
   const images = imagesIn(parts);
 
-  // 1) Zar
+  // 1) Zar. İkonlar tanınmasa bile "rolled" satırı kurulumun bittiğini söyler,
+  //    bu yüzden metin de yeterli kabul edilir (total null olabilir).
   const dice = images.filter((i) => /^dice_\d/.test(i)).map((i) => Number(i.match(/^dice_(\d+)/)[1]));
-  if (dice.length >= 2) {
-    return { kind: 'roll', player: actor, total: dice.reduce((a, b) => a + b, 0), dice };
+  if (dice.length >= 2 || /\brolled\b/.test(text)) {
+    const total = dice.length >= 2 ? dice.reduce((a, b) => a + b, 0) : firstNumber(text);
+    return { kind: 'roll', player: actor, total, dice };
   }
 
   // 2) Kurulum bitti işareti

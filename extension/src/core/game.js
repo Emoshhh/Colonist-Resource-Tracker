@@ -15,7 +15,19 @@ export class Game {
     this.rolls = new Array(13).fill(0);
     this.rollCount = 0;
     this.unknownMessages = [];
+    this.missed = 0;
     this.lastEvent = null;
+  }
+
+  /**
+   * Sanal kaydırıcı yüzünden okunamayan satır sayısı.
+   * (Oyuna sonradan bağlanıldığında ya da log hızlı akıp satırlar
+   * DOM'dan çıktığında olur — sayım bu noktadan sonra eksik kalabilir.)
+   */
+  noteMissed(count) {
+    this.missed += count;
+    // Satır kaçırdıysak oyun çoktan başlamıştır.
+    if (count > 0) this.setupPhase = false;
   }
 
   get players() {
@@ -26,9 +38,22 @@ export class Game {
     this.tracker.addPlayer(name);
   }
 
+  /**
+   * Kurulum yalnızca yerleştirme ve başlangıç kaynaklarıyla sürer;
+   * bunların dışındaki her olay oyunun başladığını gösterir. (Zar satırı
+   * kaçırılsa bile inşa maliyetleri düşülmeye devam etsin diye.)
+   */
+  _noteGameStarted(ev) {
+    if (!this.setupPhase) return;
+    if (ev.kind === 'place' || ev.kind === 'ignore' || ev.kind === 'unknown') return;
+    if (ev.kind === 'gain' && ev.reason === 'starting') return;
+    this.setupPhase = false;
+  }
+
   applyEvent(ev) {
     if (!ev) return;
     this.lastEvent = ev;
+    this._noteGameStarted(ev);
     const t = this.tracker;
 
     switch (ev.kind) {
@@ -37,8 +62,6 @@ export class Game {
           this.rolls[ev.total] += 1;
           this.rollCount += 1;
         }
-        // İlk zar atıldıysa kurulum bitmiştir.
-        this.setupPhase = false;
         break;
 
       case 'setupDone':
@@ -121,6 +144,7 @@ export class Game {
     rep.rollCount = this.rollCount;
     rep.setupPhase = this.setupPhase;
     rep.unknownCount = this.unknownMessages.length;
+    rep.missed = this.missed;
     return rep;
   }
 }

@@ -2,29 +2,48 @@
  * colonist.io DOM adaptörü: oyun log'unu bulur ve mesajları
  * parser'ın anladığı "parça" dizisine çevirir.
  *
- * Colonist id/class isimlerini değiştirdiğinde çalışmaya devam etmesi için
- * log kutusu önce bilinen seçicilerle, bulunamazsa içeriğe bakılarak aranır.
+ * İki önemli ayrıntı:
+ *  - Colonist id/class isimlerine build hash'i ekliyor, bu yüzden log kutusu
+ *    önce önek seçicileriyle, bulunamazsa içeriğe bakılarak aranır.
+ *  - Log bir SANAL KAYDIRICI: yalnızca görünen ~8 satır DOM'da durur ve
+ *    düğümler geri dönüştürülür. Bu yüzden satırlar düğüm kimliğiyle değil
+ *    `data-index` sırasıyla takip edilir; atlanan satırlar da raporlanır.
  */
+
+/**
+ * Colonist class adlarına build hash'i ekliyor ("virtualScroller-lSkdkGJi"),
+ * bu yüzden seçiciler önek eşlemesiyle yazılır ve içerikle doğrulanır.
+ */
+import { isAvatarImage } from '../core/resources.js';
 
 export const LOG_SELECTORS = [
   '#game-log-text',
-  '.game-log-text',
+  '[class*="virtualScroller"]',
   '[id*="game-log"]',
   '[class*="game-log"]',
-  '[class*="message-post"]',
 ];
 
 /** Bir log satırında geçmesi beklenen fiiller. */
 const LOG_LINE_RE =
   /\b(rolled|placed a|received starting resources|got|built a|bought|stole|discarded|gave|took|used|moved robber|wants to give)\b/i;
 
+/** Bu eleman gerçekten log kutusu mu? (sohbet kutusu da sanal kaydırıcı olabilir) */
+function looksLikeLog(el, minHits = 2) {
+  if (!el || el.children.length < 2) return false;
+  let hits = 0;
+  const kids = el.children;
+  for (let i = 0; i < Math.min(kids.length, 60); i++) {
+    const t = kids[i].textContent;
+    if (t && t.length <= 200 && LOG_LINE_RE.test(t)) hits++;
+  }
+  return hits >= minHits;
+}
+
 function bySelectors(root) {
   for (const sel of LOG_SELECTORS) {
-    let el = root.querySelector(sel);
-    if (!el) continue;
-    // "message-post" tek bir satırı işaret eder; kapsayıcısını al.
-    if (sel.includes('message-post') && el.parentElement) el = el.parentElement;
-    if (el.children.length >= 1) return el;
+    for (const el of root.querySelectorAll(sel)) {
+      if (looksLikeLog(el)) return el;
+    }
   }
   return null;
 }
@@ -122,10 +141,12 @@ export function elementToParts(el) {
       if (child.nodeType !== 1) continue;
 
       if (child.tagName === 'IMG') {
-        parts.push({
-          t: 'img',
-          v: child.getAttribute('src') || child.getAttribute('alt') || child.className || '',
-        });
+        const src = child.getAttribute('src') || '';
+        const alt = child.getAttribute('alt') || '';
+        // Mesaj başındaki avatar ikonu oyunla ilgili değil.
+        if (!isAvatarImage(src) && alt !== 'bot') {
+          parts.push({ t: 'img', v: src || alt || child.className || '' });
+        }
         continue;
       }
 
@@ -156,19 +177,25 @@ export function elementToParts(el) {
  * Yeni oyun başladığında (log kutusu değiştiğinde ya da sıfırlandığında) onReset çağrılır.
  */
 export class LogWatcher {
-  constructor({ onMessage, onReset, onStatus } = {}) {
+  constructor({ onMessage, onReset, onStatus, onGap } = {}) {
     this.onMessage = onMessage || (() => {});
     this.onReset = onReset || (() => {});
     this.onStatus = onStatus || (() => {});
+    this.onGap = onGap || (() => {});
     this.logEl = null;
     this.seen = new WeakSet();
+    this.lastIndex = -1;
     this.lastCount = 0;
     this.observer = null;
     this.timer = null;
   }
 
   start() {
-    this.timer = setInterval(() => this._ensureLog(), 1500);
+    // Sanal kaydırıcıda mutasyonlar kaçabildiği için düzenli yoklama da yapılır.
+    this.timer = setInterval(() => {
+      this._ensureLog();
+      this.flush();
+    }, 700);
     this._ensureLog();
   }
 
@@ -184,13 +211,9 @@ export class LogWatcher {
     if (this.logEl && !document.contains(this.logEl)) this.logEl = null;
 
     if (this.logEl) {
-      // Log boşaldıysa yeni oyun başlamıştır.
-      const count = this.logEl.children.length;
-      if (count < this.lastCount && count <= 3) {
-        this.seen = new WeakSet();
-        this.onReset();
-      }
-      this.lastCount = count;
+      // Sıra numaraları başa döndüyse yeni oyun başlamıştır.
+      const maxIdx = this._rows().reduce((m, r) => Math.max(m, r.idx), -1);
+      if (maxIdx >= 0 && maxIdx + 5 < this.lastIndex) this._reset();
       return;
     }
 
@@ -201,44 +224,78 @@ export class LogWatcher {
     }
 
     this.logEl = el;
-    this.seen = new WeakSet();
-    this.lastCount = el.children.length;
     if (this.observer) this.observer.disconnect();
-    this.onReset();
+    this._reset();
     this.onStatus('connected');
 
     this.observer = new MutationObserver(() => this.flush());
-    this.observer.observe(el, { childList: true, subtree: true });
+    this.observer.observe(el, { childList: true, subtree: true, characterData: true });
     this.flush();
+  }
+
+  _reset() {
+    this.seen = new WeakSet();
+    this.lastIndex = -1;
+    this.onReset();
   }
 
   /** Log kutusunu yeniden ara (panelde ⟲ düğmesi). */
   rescan() {
     this.logEl = null;
-    this.seen = new WeakSet();
-    this.lastCount = 0;
     this._ensureLog();
   }
 
-  /** Henüz işlenmemiş mesajları sırayla yollar. */
+  /** Görünen satırlar, sıra numarasıyla. */
+  _rows() {
+    if (!this.logEl) return [];
+    return Array.from(this.logEl.children).map((el) => {
+      const raw = el.getAttribute && el.getAttribute('data-index');
+      const idx = raw === null || raw === undefined ? NaN : Number(raw);
+      return { el, idx };
+    });
+  }
+
+  /**
+   * Henüz işlenmemiş mesajları sırayla yollar.
+   * Sıra numarası varsa ona güvenilir (düğümler geri dönüştürüldüğü için şart),
+   * yoksa düğüm kimliğiyle çalışılır.
+   */
   flush() {
     if (!this.logEl) return;
-    for (const child of Array.from(this.logEl.children)) {
-      if (this.seen.has(child)) continue;
-      this.seen.add(child);
-      const parts = elementToParts(child);
-      if (parts.length) this.onMessage(parts, child);
+    const rows = this._rows();
+    const indexed = rows.filter((r) => Number.isFinite(r.idx));
+
+    if (!indexed.length) {
+      for (const { el } of rows) {
+        if (this.seen.has(el)) continue;
+        this.seen.add(el);
+        const parts = elementToParts(el);
+        if (parts.length) this.onMessage(parts, el);
+      }
+      return;
+    }
+
+    indexed.sort((a, b) => a.idx - b.idx);
+    for (const { el, idx } of indexed) {
+      if (idx <= this.lastIndex) continue;
+      const missed = this.lastIndex < 0 ? idx : idx - this.lastIndex - 1;
+      if (missed > 0) this.onGap(missed);
+      this.lastIndex = idx;
+      const parts = elementToParts(el);
+      if (parts.length) this.onMessage(parts, el);
     }
   }
 
-  /** Hata ayıklama dökümü: seçilen kutu + ilk satırların ham HTML'i. */
+  /** Hata ayıklama dökümü: seçilen kutu + görünen satırların ham HTML'i. */
   dump() {
     if (!this.logEl) return 'log kutusu bulunamadı';
-    const desc = `<${this.logEl.tagName.toLowerCase()} id="${this.logEl.id}" class="${this.logEl.className}"> (${this.logEl.children.length} satır)`;
+    const desc =
+      `<${this.logEl.tagName.toLowerCase()} id="${this.logEl.id}" class="${this.logEl.className}">` +
+      ` — görünen ${this.logEl.children.length} satır, son işlenen index ${this.lastIndex}`;
     const rows = Array.from(this.logEl.children)
       .slice(0, 25)
       .map((c) => c.outerHTML)
-      .join('\n');
+      .join('\n\n');
     return `${desc}\n\n${rows}`;
   }
 }

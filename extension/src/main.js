@@ -59,6 +59,10 @@ function handleMessage(parts) {
 
 const watcher = new LogWatcher({
   onMessage: handleMessage,
+  onGap: (missed) => {
+    game.noteMissed(missed);
+    scheduleRender();
+  },
   onReset: () => {
     game = new Game();
     me = findOwnUsername();

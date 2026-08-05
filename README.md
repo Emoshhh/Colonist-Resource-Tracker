@@ -57,6 +57,16 @@ Firefox için `about:debugging` → "Bu Firefox" → "Geçici Eklenti Yükle" �
 
 Başlık çubuğundan sürükleyerek taşıyabilirsin; konum ve durum `localStorage`'da saklanır.
 
+## Önemli: oyunu baştan izlemesi gerekir
+
+Colonist'in log'u bir **sanal kaydırıcıdır** — o an ekranda görünen ~8 satır DOM'da durur,
+yukarı kayanlar tamamen silinir. Yani eklenti geçmişi geriye dönük okuyamaz.
+
+- Eklentiyi **oyun başlamadan önce** açık tut (sekme açıkken masaya otur).
+- Oynarken log'u yukarı kaydırıp öyle bırakma; yeni satırlar DOM'a hiç girmez.
+- Bir şey kaçarsa panel `⚠ N satır okunamadı` der. Satırlar `data-index` sırasıyla
+  takip edildiği için kaçan satır sayısı kesin bilinir; sessizce yanlış sayı göstermez.
+
 ## Gerçek log'a nasıl bakılır
 
 Panel "Oyun log'u bulunamadı" diyorsa ya da satırları tanımıyorsa, ham log'u görmek gerekir:

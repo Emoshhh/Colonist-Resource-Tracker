@@ -86,21 +86,47 @@ export function vectorSum(vec) {
   return vec.reduce((a, b) => a + b, 0);
 }
 
-/** Bir ikon adını (ör. "card_ore.svg", ".../card_ore") normalize eder. */
+/** İkon adının içinde geçebilecek kaynak sözcükleri. */
+const RESOURCE_TOKENS = {
+  lumber: 'lumber',
+  wood: 'lumber',
+  brick: 'brick',
+  clay: 'brick',
+  wool: 'wool',
+  sheep: 'wool',
+  grain: 'grain',
+  wheat: 'grain',
+  ore: 'ore',
+  stone: 'ore',
+};
+
+/**
+ * İkon adını normalize eder.
+ * Colonist dosya adlarına build hash'i ekliyor:
+ *   ".../settlement_blue.bad4cdb43d65c329deda.svg" -> "settlement_blue"
+ */
 export function normalizeImageName(raw) {
   if (!raw) return '';
-  const base = String(raw).split('?')[0].split('#')[0].split('/').pop() || '';
-  return base.replace(/\.(svg|png|jpg|jpeg|webp|gif)$/i, '').toLowerCase();
+  let base = String(raw).split('?')[0].split('#')[0].split('/').pop() || '';
+  base = base.replace(/\.(svg|png|jpg|jpeg|webp|gif)$/i, '');
+  base = base.replace(/\.[0-9a-f]{8,}$/i, '');
+  return base.toLowerCase();
 }
 
 export function imageToResource(raw) {
   const name = normalizeImageName(raw);
+  if (!name) return null;
   if (IMAGE_TO_RESOURCE[name]) return IMAGE_TO_RESOURCE[name];
-  // "card_ore_2" gibi varyantlar için gevşek eşleme
-  for (const [key, res] of Object.entries(IMAGE_TO_RESOURCE)) {
-    if (key.startsWith('card_') && name.startsWith(key)) return res;
+  for (const token of name.split(/[^a-z0-9]+/)) {
+    if (RESOURCE_TOKENS[token]) return RESOURCE_TOKENS[token];
   }
   return null;
+}
+
+/** Mesaj başındaki avatar/profil ikonları kaynak değildir. */
+export function isAvatarImage(raw) {
+  const name = normalizeImageName(raw);
+  return /^(icon_bot|avatar|icon_user|profile)/.test(name);
 }
 
 export function isHiddenCardImage(raw) {

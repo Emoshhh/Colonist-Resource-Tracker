@@ -95,6 +95,30 @@ test('gelişim kartı sayacı alım ve oynamayı izler', () => {
   assert.equal(rep.players.find((p) => p.name === 'Veli').devCards, 0);
 });
 
+test('zar ikonu tanınmasa bile kurulum biter ve maliyetler düşer', () => {
+  const g = new Game();
+  feed(g, [P('Ali'), T('placed a Settlement'), I('settlement_blue')]);
+  feed(g, [P('Ali'), T('received starting resources'), I('card_lumber'), I('card_brick')]);
+  assert.equal(g.report().setupPhase, true);
+
+  // Zar görselleri tanınmıyor, yalnızca metin var
+  feed(g, [P('Ali'), T('rolled'), I('unknown_icon')]);
+  assert.equal(g.report().setupPhase, false);
+
+  feed(g, [P('Ali'), T('built a Road'), I('road_blue')]);
+  const rep = g.report();
+  assert.equal(rep.desyncs, 0);
+  assert.equal(cell(rep, 'Ali', 'lumber').max, 0, 'yol maliyeti düşülmeli');
+});
+
+test('kaçan satır sayısı raporlanır ve kurulumu kapatır', () => {
+  const g = new Game();
+  g.noteMissed(12);
+  const rep = g.report();
+  assert.equal(rep.missed, 12);
+  assert.equal(rep.setupPhase, false);
+});
+
 test('tanınmayan satırlar durumu bozmadan biriktirilir', () => {
   const g = new Game();
   feed(g, [T('Giving out starting resources')]);

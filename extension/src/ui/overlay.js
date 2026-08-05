@@ -175,6 +175,7 @@ export class Overlay {
     this._renderRolls(report);
 
     const problems = [];
+    if (report.missed) problems.push(`${report.missed} satır okunamadı (sayım eksik olabilir)`);
     if (report.desyncs) problems.push(`${report.desyncs} log satırı hesapla çelişti`);
     if (report.unknownCount) problems.push(`${report.unknownCount} satır tanınmadı`);
     this.warn.textContent = problems.length ? '⚠ ' + problems.join(' · ') : '';
