@@ -1,0 +1,10 @@
+{
+  "name": "colonist-resource-tracker",
+  "version": "1.0.0",
+  "description": "colonist.io oyun log'undan rakip kaynaklarını canlı takip eden tarayıcı eklentisi",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  }
+}
