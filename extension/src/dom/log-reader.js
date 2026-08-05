@@ -10,12 +10,12 @@
  *    `data-index` sırasıyla takip edilir; atlanan satırlar da raporlanır.
  */
 
+import { isAvatarImage, avatarKind } from '../core/resources.js';
+
 /**
  * Colonist class adlarına build hash'i ekliyor ("virtualScroller-lSkdkGJi"),
  * bu yüzden seçiciler önek eşlemesiyle yazılır ve içerikle doğrulanır.
  */
-import { isAvatarImage } from '../core/resources.js';
-
 export const LOG_SELECTORS = [
   '#game-log-text',
   '[class*="virtualScroller"]',
@@ -117,9 +117,14 @@ function looksLikePlayerName(el) {
   return /semibold|player-?name|username/i.test(cls);
 }
 
+/** Sadece avatardan ibaret satırlar (ör. <hr> ayırıcı) olay üretmez. */
+export function hasContent(parts) {
+  return parts.some((p) => p.t === 'text' || p.t === 'img' || p.t === 'player');
+}
+
 /**
  * Bir log mesajı elemanını parçalara ayırır.
- * @returns {Array<{t:'text'|'img'|'player', v:string}>}
+ * @returns {Array<{t:'text'|'img'|'player'|'avatar', v:string}>}
  */
 export function elementToParts(el) {
   const parts = [];
@@ -143,10 +148,15 @@ export function elementToParts(el) {
       if (child.tagName === 'IMG') {
         const src = child.getAttribute('src') || '';
         const alt = child.getAttribute('alt') || '';
-        // Mesaj başındaki avatar ikonu oyunla ilgili değil.
-        if (!isAvatarImage(src) && alt !== 'bot') {
-          parts.push({ t: 'img', v: src || alt || child.className || '' });
+        // Mesaj başındaki avatar kaynak değil; ama bot mu insan mı olduğunu
+        // söylüyor — "You stole from X" satırlarında kimin sen olduğunu
+        // bulmak için bu bilgi kullanılıyor.
+        if (isAvatarImage(src) || alt === 'bot' || alt === 'Player avatar') {
+          const kind = avatarKind(src) || (alt === 'bot' ? 'bot' : 'human');
+          parts.push({ t: 'avatar', v: kind });
+          continue;
         }
+        parts.push({ t: 'img', v: src || alt || child.className || '' });
         continue;
       }
 
@@ -270,7 +280,7 @@ export class LogWatcher {
         if (this.seen.has(el)) continue;
         this.seen.add(el);
         const parts = elementToParts(el);
-        if (parts.length) this.onMessage(parts, el);
+        if (hasContent(parts)) this.onMessage(parts, el);
       }
       return;
     }
@@ -282,7 +292,7 @@ export class LogWatcher {
       if (missed > 0) this.onGap(missed);
       this.lastIndex = idx;
       const parts = elementToParts(el);
-      if (parts.length) this.onMessage(parts, el);
+      if (hasContent(parts)) this.onMessage(parts, el);
     }
   }
 

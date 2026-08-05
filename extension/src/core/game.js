@@ -16,6 +16,7 @@ export class Game {
     this.rollCount = 0;
     this.unknownMessages = [];
     this.missed = 0;
+    this.unresolvedYou = 0;
     this.lastEvent = null;
   }
 
@@ -126,6 +127,11 @@ export class Game {
         break;
       }
 
+      case 'stealUnresolved':
+        // "You stole from X" — kendi adımız bilinmediği için işlenemedi.
+        this.unresolvedYou += 1;
+        break;
+
       case 'unknown':
         if (ev.text) {
           this.unknownMessages.push(ev.text);
@@ -145,6 +151,7 @@ export class Game {
     rep.setupPhase = this.setupPhase;
     rep.unknownCount = this.unknownMessages.length;
     rep.missed = this.missed;
+    rep.unresolvedYou = this.unresolvedYou;
     return rep;
   }
 }

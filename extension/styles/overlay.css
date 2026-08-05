@@ -94,6 +94,15 @@
   padding-left: 2px;
 }
 
+#colonist-tracker .ct-name {
+  cursor: pointer;
+}
+
+#colonist-tracker .ct-name:hover {
+  color: #fff;
+  text-decoration: underline dotted;
+}
+
 #colonist-tracker .ct-me {
   color: #7fd0ff;
   font-weight: 600;

@@ -126,7 +126,15 @@ export function imageToResource(raw) {
 /** Mesaj başındaki avatar/profil ikonları kaynak değildir. */
 export function isAvatarImage(raw) {
   const name = normalizeImageName(raw);
-  return /^(icon_bot|avatar|icon_user|profile)/.test(name);
+  return /^(icon_bot|icon_player|icon_user|avatar|profile)/.test(name);
+}
+
+/** Avatar ikonundan mesajın botu mu insanı mı anlattığını çıkarır. */
+export function avatarKind(raw) {
+  const name = normalizeImageName(raw);
+  if (name.startsWith('icon_bot')) return 'bot';
+  if (name.startsWith('icon_player') || name.startsWith('icon_user')) return 'human';
+  return null;
 }
 
 export function isHiddenCardImage(raw) {

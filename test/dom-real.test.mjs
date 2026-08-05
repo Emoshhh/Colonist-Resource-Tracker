@@ -18,7 +18,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { elementToParts } from '../extension/src/dom/log-reader.js';
+import { elementToParts, hasContent } from '../extension/src/dom/log-reader.js';
 import { parseMessage, playersIn } from '../extension/src/core/parser.js';
 import { normalizeImageName, imageToResource } from '../extension/src/core/resources.js';
 import { Game } from '../extension/src/core/game.js';
@@ -102,10 +102,10 @@ test('gerçek satır: "Melvin placed a Settlement"', () => {
   const parts = elementToParts(el);
   assert.deepEqual(
     parts.map((p) => p.t),
-    ['player', 'text', 'img'],
-    'avatar ikonu ayıklanmalı',
+    ['avatar', 'player', 'text', 'img'],
+    'avatar kaynak değil, ayrı tür olarak işaretlenir',
   );
-  assert.equal(parts[0].v, 'Melvin');
+  assert.equal(parts[1].v, 'Melvin');
 
   const ev = parseMessage(parts, {});
   assert.equal(ev.kind, 'place');
@@ -154,7 +154,9 @@ test('gerçek satır: kaynak dağıtımı ve takas', () => {
 
 test('ayırıcı satır (<hr>) olay üretmez', () => {
   const el = row([element('hr')]);
-  assert.deepEqual(elementToParts(el), []);
+  const parts = elementToParts(el);
+  assert.deepEqual(parts.map((p) => p.t), ['avatar'], 'sadece avatar kalır');
+  assert.equal(hasContent(parts), false);
 });
 
 test('sanal kaydırıcıdan gelen satır dizisi uçtan uca işlenir', () => {

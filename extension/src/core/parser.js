@@ -31,7 +31,23 @@ export const SNIPPETS = {
   built: ['built'],
   placed: ['placed'],
   used: ['used'],
-  ignore: ['wants to give', 'is trading', 'moved robber', 'turn to place', 'rolled', 'won the game'],
+  ignore: [
+    'wants to give',
+    'is trading',
+    'moved robber',
+    'placed the robber',
+    'turn to place',
+    'won the game',
+    // kaynak hareketi içermeyen bilgi satırları
+    'is blocked by the robber',
+    'no resources produced',
+    'selecting cards to discard',
+    'longest road',
+    'largest army',
+    'is now the owner',
+    'joined the game',
+    'left the game',
+  ],
 };
 
 /** İkon adları oyuncu rengine göre değişebildiği için parça eşleme yapılır. */
@@ -79,10 +95,16 @@ const DEV_PLAY_IMAGES = {
 
 export function flatText(parts) {
   return parts
-    .map((p) => (p.t === 'img' ? ' ' : p.v))
+    .map((p) => (p.t === 'text' || p.t === 'player' ? p.v : ' '))
     .join(' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/** Mesajın konusu bot mu, giriş yapmış oyuncu mu? ('bot' | 'human' | null) */
+export function avatarOf(parts) {
+  const part = parts.find((p) => p.t === 'avatar');
+  return part ? part.v : null;
 }
 
 function lower(parts) {
@@ -278,25 +300,32 @@ export function parseMessage(parts, ctx = {}) {
     }
   }
 
-  // 9) Hırsızlık
-  if (has(parts, SNIPPETS.stole)) {
+  // 9) Hırsızlık — "<A> stole [kart] from <B>"
+  //    A veya B "You" olabilir; o zaman ctx.me ile eşlenir.
+  const stealMatch = flatText(parts).match(/^(.*?)\bstole\b(.*?)\bfrom\b(.*)$/i);
+  if (stealMatch) {
     const { obj, hidden } = resourcesFrom(images);
     const res = Object.keys(obj)[0] || null;
-    let thief = names[0] || null;
-    let victim = names[1] || null;
-    if (!victim && ctx.me) {
-      // "You stole ... from X" / "X stole ... from you"
-      const stoleIdx = text.indexOf('stole');
-      const youIdx = text.indexOf('you');
-      if (youIdx >= 0 && youIdx < stoleIdx) {
-        thief = ctx.me;
-        victim = names[0] || null;
-      } else if (youIdx > stoleIdx) {
-        thief = names[0] || null;
-        victim = ctx.me;
-      }
+
+    const resolveSide = (raw) => {
+      const value = String(raw || '').trim().replace(/[.:!,]$/, '').trim();
+      if (!value) return null;
+      if (/^you$/i.test(value)) return ctx.me || { unresolved: true };
+      const exact = known.find((n) => n === value);
+      if (exact) return exact;
+      const contained = known.find((n) => value.includes(n));
+      if (contained) return contained;
+      if (/all players/i.test(value)) return null;
+      return value.length <= 32 ? value : null;
+    };
+
+    const thief = resolveSide(stealMatch[1]);
+    const victim = resolveSide(stealMatch[3]);
+
+    // "you" geçiyor ama kendi adımızı henüz bilmiyoruz
+    if ((thief && thief.unresolved) || (victim && victim.unresolved)) {
+      return { kind: 'stealUnresolved', text: flatText(parts) };
     }
-    if (victim && /all players|all of/i.test(victim)) victim = null;
     if (thief && victim && thief !== victim) {
       if (res && !hidden) return { kind: 'stealKnown', thief, victim, res };
       return { kind: 'stealUnknown', thief, victim };

@@ -30,9 +30,10 @@ function saveUiState(state) {
 }
 
 export class Overlay {
-  constructor({ onReset, onCopyDebug } = {}) {
+  constructor({ onReset, onCopyDebug, onPickMe } = {}) {
     this.onReset = onReset || (() => {});
     this.onCopyDebug = onCopyDebug || (() => {});
+    this.onPickMe = onPickMe || (() => {});
     this.ui = loadUiState();
     this.showRolls = this.ui.showRolls ?? true;
     this.root = null;
@@ -175,6 +176,9 @@ export class Overlay {
     this._renderRolls(report);
 
     const problems = [];
+    if (report.unresolvedYou) {
+      problems.push(`${report.unresolvedYou} "sen" satırı işlenemedi — kendi adına tıkla`);
+    }
     if (report.missed) problems.push(`${report.missed} satır okunamadı (sayım eksik olabilir)`);
     if (report.desyncs) problems.push(`${report.desyncs} log satırı hesapla çelişti`);
     if (report.unknownCount) problems.push(`${report.unknownCount} satır tanınmadı`);
@@ -220,7 +224,8 @@ export class Overlay {
       const tr = el('tr', 'ct-row');
       const name = el('td', 'ct-td ct-name', player.name);
       if (player.name === this.me) name.classList.add('ct-me');
-      name.title = player.name;
+      name.title = `${player.name}\n(tıkla: "ben buyum" olarak işaretle)`;
+      name.addEventListener('click', () => this.onPickMe(player.name));
       tr.appendChild(name);
 
       player.res.forEach((cell) => {

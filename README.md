@@ -46,6 +46,17 @@ Toplam kart sayısı (Σ) her zaman kesindir — çalma toplamı değiştirmez, 
 
 Firefox için `about:debugging` → "Bu Firefox" → "Geçici Eklenti Yükle" → `extension/manifest.json`.
 
+## "Sen" kimsin?
+
+Log, seninle ilgili satırları isimle değil ikinci tekil şahısla yazar:
+`You stole from Cuda`, `Giule stole from you`. Bunları işleyebilmek için eklentinin
+senin oyundaki adını bilmesi gerekir.
+
+- **Botlu oyunlarda otomatik:** mesajların avatar ikonu botu insandan ayırır
+  (`icon_bot` vs `icon_player_loggedin`), bot olmayan tek oyuncu sensindir.
+- **Birden fazla insan varsa:** panelde kendi adına tıkla. Seçim tarayıcıda saklanır.
+  Çözülemeyen satır varsa panel `⚠ N "sen" satırı işlenemedi — kendi adına tıkla` der.
+
 ## Panel düğmeleri
 
 | Düğme | İşlev |
