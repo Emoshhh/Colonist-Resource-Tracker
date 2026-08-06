@@ -62,6 +62,12 @@ function resolveMe() {
   return findOwnUsername();
 }
 
+/** Birden fazla insan oyuncu varsa kendi adımızı log'dan çıkaramayız. */
+function meIsAmbiguous() {
+  if (manualMe) return false;
+  return [...humanPlayers].filter((n) => !botPlayers.has(n)).length > 1;
+}
+
 const overlay = new Overlay({
   onReset: () => {
     game = new Game();
@@ -79,7 +85,7 @@ const overlay = new Overlay({
       /* yok say */
     }
     me = resolveMe();
-    overlay.setMe(me);
+    overlay.setMe(me, meIsAmbiguous());
     scheduleRender();
   },
   onCopyDebug: () => {
@@ -117,7 +123,7 @@ function handleMessage(parts) {
   collectIcons(parts);
   noteAvatar(parts);
   me = resolveMe();
-  overlay.setMe(me);
+  overlay.setMe(me, meIsAmbiguous());
 
   const event = parseMessage(parts, { players: game.players, me });
   if (DEBUG) console.debug('[colonist-tracker]', event, parts);
@@ -136,7 +142,7 @@ const watcher = new LogWatcher({
     botPlayers.clear();
     humanPlayers.clear();
     me = resolveMe();
-    overlay.setMe(me);
+    overlay.setMe(me, meIsAmbiguous());
     scheduleRender();
   },
   onStatus: (state) => overlay.setStatus(state),
@@ -146,7 +152,7 @@ function boot() {
   overlay.mount();
   overlay.setStatus('waiting');
   me = resolveMe();
-  overlay.setMe(me);
+  overlay.setMe(me, meIsAmbiguous());
   watcher.start();
   scheduleRender();
   console.log('[colonist-tracker] hazır');

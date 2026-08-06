@@ -235,6 +235,11 @@
   text-align: center;
 }
 
+#colonist-tracker .ct-hint {
+  color: #ffd88a;
+  cursor: help;
+}
+
 #colonist-tracker .ct-footer {
   margin-top: 6px;
   font-size: 10px;

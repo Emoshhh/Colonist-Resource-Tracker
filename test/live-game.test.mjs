@@ -215,6 +215,87 @@ test('haydut satırındaki arazi ikonu kaynak sayılmaz', () => {
   assert.equal(grain.max, 0, 'arazi altıgeni buğday kartı sayılmamalı');
 });
 
+test('oyuncusuz bilgi satırı: "<prob> <tile> is blocked by the Robber"', () => {
+  // Bu satırda ne avatar ne de oyuncu adı var, sadece iki ikon + metin.
+  const parts = elementToParts(
+    element('div', {
+      className: 'scrollItemContainer-WXX2rkzf',
+      attrs: { 'data-index': '429' },
+      children: [
+        element('div', {
+          className: 'feedMessage-O8TLknGe',
+          children: [
+            element('span', {
+              className: 'messagePart-XeUsOgLX',
+              children: [
+                element('img', {
+                  attrs: { src: `${CDN}/prob_6.ada0b8434cfe315beb72.svg`, alt: 'prob_6' },
+                }),
+                element('img', {
+                  attrs: {
+                    src: `${CDN}/generated_tile_grain.50fd57746befab85ea35.svg`,
+                    alt: 'grain tile',
+                  },
+                }),
+                textNode(' is blocked by the Robber. No resources produced'),
+              ],
+            }),
+          ],
+        }),
+      ],
+    }),
+  );
+
+  const ev = parseMessage(parts, { players: ['Emosh'] });
+  assert.equal(ev.kind, 'ignore');
+  assert.equal(ev.player, null, 'satırın sahibi yok');
+});
+
+test('zafer satırı yok sayılır', () => {
+  const ev = parseMessage(
+    elementToParts(
+      row(
+        [
+          element('img', { attrs: { src: `${CDN}/icon_trophy.bc5c68a7464f0462721d.svg`, alt: 'trophy' } }),
+          player('Carie49985693', '#CF4449'),
+          textNode(' won the game! '),
+          element('img', { attrs: { src: `${CDN}/icon_trophy.bc5c68a7464f0462721d.svg`, alt: 'trophy' } }),
+        ],
+        { bot: false },
+      ),
+    ),
+    { players: ['Carie49985693'] },
+  );
+  assert.equal(ev.kind, 'ignore');
+});
+
+test('tek satırda birleşmiş iki 3:1 banka takası', () => {
+  const ev = parseMessage(
+    elementToParts(
+      row(
+        [
+          player('Carie49985693', '#CF4449'),
+          textNode(' gave bank '),
+          card('grain', 'Grain'),
+          card('grain', 'Grain'),
+          card('grain', 'Grain'),
+          card('ore', 'Ore'),
+          card('ore', 'Ore'),
+          card('ore', 'Ore'),
+          textNode(' and took '),
+          card('brick', 'Brick'),
+          card('lumber', 'Lumber'),
+        ],
+        { bot: false },
+      ),
+    ),
+    { players: ['Carie49985693'] },
+  );
+  assert.equal(ev.kind, 'tradeBank');
+  assert.deepEqual(ev.gave, { grain: 3, ore: 3 });
+  assert.deepEqual(ev.took, { brick: 1, lumber: 1 });
+});
+
 test('"Arlen stole 🌾 from you" — benden çalınan kart görünür, kesin işlenir', () => {
   const ev = parseMessage(
     elementToParts(row([player('Arlen', '#CF6B2E'), textNode(' stole '), card('grain', 'Grain'), textNode(' from you')])),

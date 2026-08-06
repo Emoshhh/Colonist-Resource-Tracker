@@ -190,8 +190,13 @@ export class Overlay {
     this.statusEl.title = tip;
   }
 
-  setMe(name) {
+  /**
+   * @param {string|null} name  çözülen kendi adımız
+   * @param {boolean} ambiguous birden fazla insan oyuncu var, seçim gerekiyor
+   */
+  setMe(name, ambiguous = false) {
     this.me = name;
+    this.ambiguous = ambiguous;
   }
 
   /** report(): Game#report() çıktısı */
@@ -212,7 +217,16 @@ export class Overlay {
     this.warn.style.display = problems.length ? '' : 'none';
 
     const certainty = report.worlds === 1 ? 'kesin' : `${report.worlds} olası dağılım`;
-    this.footer.textContent = `${certainty}${report.setupPhase ? ' · kurulum' : ''}`;
+    const setup = report.setupPhase ? ' · kurulum' : '';
+    this.footer.textContent = `${certainty}${setup}`;
+
+    // Birden fazla insan oyuncu varsa "you" satırları için seçim gerekir.
+    if (!this.me && this.ambiguous && report.players.length) {
+      this.footer.textContent += ' · ';
+      const pick = el('span', 'ct-hint', 'kendini seç ↑');
+      pick.title = 'Log seninle ilgili satırları "you" diye yazar.\nKendi adına tıklayarak eşle.';
+      this.footer.appendChild(pick);
+    }
   }
 
   /**
