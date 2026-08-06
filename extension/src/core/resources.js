@@ -113,10 +113,30 @@ export function normalizeImageName(raw) {
   return base.toLowerCase();
 }
 
+/**
+ * İçinde kaynak adı geçse de kart olmayan ikonlar.
+ * Örnek: haydut satırındaki "generated_tile_grain" bir arazi altıgenidir,
+ * elde buğday olduğu anlamına gelmez.
+ */
+const NON_CARD_PREFIXES = [
+  'generated_tile',
+  'tile',
+  'hex',
+  'prob',
+  'port',
+  'harbor',
+  'icon',
+  'dice',
+  'road',
+  'settlement',
+  'city',
+];
+
 export function imageToResource(raw) {
   const name = normalizeImageName(raw);
   if (!name) return null;
   if (IMAGE_TO_RESOURCE[name]) return IMAGE_TO_RESOURCE[name];
+  if (NON_CARD_PREFIXES.some((p) => name.startsWith(p))) return null;
   for (const token of name.split(/[^a-z0-9]+/)) {
     if (RESOURCE_TOKENS[token]) return RESOURCE_TOKENS[token];
   }

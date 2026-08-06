@@ -182,6 +182,50 @@ test('"Giule stole from you" / "You stole from Cuda" — kendi adımız bilininc
   assert.equal(iStole.victim, 'Cuda');
 });
 
+test('haydut satırındaki arazi ikonu kaynak sayılmaz', () => {
+  // "Arlen moved Robber 🦹 to <prob_8> <generated_tile_grain>"
+  const parts = elementToParts(
+    row([
+      player('Arlen', '#CF6B2E'),
+      textNode(' moved Robber '),
+      element('img', {
+        className: 'lobbyChatTextIcon',
+        attrs: { src: `${CDN}/icon_robber.2b909f277d60f24633e8.svg`, alt: 'robber' },
+      }),
+      textNode(' to '),
+      element('img', {
+        className: 'lobbyChatTextIcon',
+        attrs: { src: `${CDN}/prob_8.ca0de6260ba265cc479f.svg`, alt: 'prob_8' },
+      }),
+      element('img', {
+        className: 'lobbyChatTextIcon',
+        attrs: { src: `${CDN}/generated_tile_grain.50fd57746befab85ea35.svg`, alt: 'grain tile' },
+      }),
+    ]),
+  );
+
+  const ev = parseMessage(parts, { players: ['Arlen', 'Emosh'] });
+  assert.equal(ev.kind, 'ignore', 'haydut hareketi kaynak transferi değil');
+
+  const g = new Game();
+  g.setupPhase = false;
+  g.addPlayer('Arlen');
+  g.applyEvent(ev);
+  const grain = g.report().players[0].res.find((r) => r.res === 'grain');
+  assert.equal(grain.max, 0, 'arazi altıgeni buğday kartı sayılmamalı');
+});
+
+test('"Arlen stole 🌾 from you" — benden çalınan kart görünür, kesin işlenir', () => {
+  const ev = parseMessage(
+    elementToParts(row([player('Arlen', '#CF6B2E'), textNode(' stole '), card('grain', 'Grain'), textNode(' from you')])),
+    { players: ['Arlen', 'Emosh'], me: 'Emosh' },
+  );
+  assert.equal(ev.kind, 'stealKnown', 'kart görüldüğü için dallanmaya gerek yok');
+  assert.equal(ev.res, 'grain');
+  assert.equal(ev.thief, 'Arlen');
+  assert.equal(ev.victim, 'Emosh');
+});
+
 test('çaldığım kart görünüyorsa kesin çalma olarak işlenir', () => {
   const ev = parseMessage(
     elementToParts(row([textNode('You stole '), card('ore', 'Ore'), textNode(' from '), CUDA()], { bot: false })),
