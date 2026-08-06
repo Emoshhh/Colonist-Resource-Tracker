@@ -47,6 +47,10 @@ export const SNIPPETS = {
     'is now the owner',
     'joined the game',
     'left the game',
+    // sistem / karşılama mesajları
+    'happy settling',
+    'list of commands',
+    'rulebook',
   ],
 };
 

@@ -153,6 +153,7 @@ test('robot/bilgi satırları yok sayılır, tanınmayan sayılmaz', () => {
     [textNode(' is blocked by the Robber. No resources produced')],
     [EMOSH(), textNode(' received Longest Road ( +2 VPs )')],
     [textNode('Bot is selecting cards to discard for Cuda')],
+    [textNode('Happy settling! Learn how to play in the rulebook . List of commands: /help')],
   ];
   for (const children of lines) {
     const ev = parseMessage(elementToParts(row(children)), { players: ['Emosh', 'Cuda'] });
