@@ -5,6 +5,7 @@
 import { Game } from './core/game.js';
 import { parseMessage, playersIn, avatarOf } from './core/parser.js';
 import { LogWatcher, findOwnUsername } from './dom/log-reader.js';
+import { readPlayerPanel } from './dom/player-panel.js';
 import { imageToResource, isDevCardImage, isHiddenCardImage } from './core/resources.js';
 import { Overlay } from './ui/overlay.js';
 
@@ -23,6 +24,18 @@ let pendingRender = false;
  */
 const botPlayers = new Set();
 const humanPlayers = new Set();
+
+/** Oyunun kendi oyuncu panelinden okunan satırlar (bağımsız doğrulama kaynağı). */
+let panelRows = [];
+
+function refreshPanel() {
+  try {
+    panelRows = readPlayerPanel();
+  } catch {
+    panelRows = [];
+  }
+  return panelRows;
+}
 
 try {
   manualMe = localStorage.getItem(ME_KEY);
@@ -57,14 +70,18 @@ function noteAvatar(parts) {
 
 function resolveMe() {
   if (manualMe && game.players.includes(manualMe)) return manualMe;
+  // En güvenilir kaynak: oyunun kendi panelindeki "currentUser" satırı.
+  const own = panelRows.find((r) => r.isMe);
+  if (own) return own.name;
   const candidates = [...humanPlayers].filter((n) => !botPlayers.has(n));
   if (candidates.length === 1) return candidates[0];
   return findOwnUsername();
 }
 
-/** Birden fazla insan oyuncu varsa kendi adımızı log'dan çıkaramayız. */
+/** Panel okunamıyor ve birden fazla insan varsa kendi adımızı çıkaramayız. */
 function meIsAmbiguous() {
   if (manualMe) return false;
+  if (panelRows.some((r) => r.isMe)) return false;
   return [...humanPlayers].filter((n) => !botPlayers.has(n)).length > 1;
 }
 
@@ -110,6 +127,7 @@ function scheduleRender() {
   pendingRender = true;
   requestAnimationFrame(() => {
     pendingRender = false;
+    overlay.setPanelRows(refreshPanel());
     overlay.render(game.report());
   });
 }
@@ -122,6 +140,7 @@ function handleMessage(parts) {
 
   collectIcons(parts);
   noteAvatar(parts);
+  refreshPanel();
   me = resolveMe();
   overlay.setMe(me, meIsAmbiguous());
 

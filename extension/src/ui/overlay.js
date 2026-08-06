@@ -40,6 +40,16 @@ export class Overlay {
     this.root = null;
     this.me = null;
     this.icons = {};
+    this.panelRows = [];
+  }
+
+  /** Oyunun kendi oyuncu panelinden okunan sayılar (bağımsız doğrulama). */
+  setPanelRows(rows) {
+    this.panelRows = Array.isArray(rows) ? rows : [];
+  }
+
+  _panelFor(name) {
+    return this.panelRows.find((r) => r.name === name) || null;
   }
 
   /** Log'da görülen gerçek kart görsellerini kullan (hash'ler sürümle değişiyor). */
@@ -207,6 +217,9 @@ export class Overlay {
     this._renderRolls(report);
 
     const problems = [];
+    if (this.mismatches) {
+      problems.push(`${this.mismatches} sayı oyun paneliyle uyuşmuyor`);
+    }
     if (report.unresolvedYou) {
       problems.push(`${report.unresolvedYou} "sen" satırı işlenemedi — kendi adına tıkla`);
     }
@@ -295,6 +308,8 @@ export class Overlay {
     head.appendChild(devTh);
     table.appendChild(head);
 
+    this.mismatches = 0;
+
     if (!report.players.length) {
       const tr = el('tr', 'ct-row');
       const td = el('td', 'ct-td ct-empty');
@@ -308,6 +323,7 @@ export class Overlay {
       return;
     }
 
+    let mismatches = 0;
     report.players.forEach((player) => {
       const tr = el('tr', 'ct-row');
       const name = el('td', 'ct-td ct-name', player.name);
@@ -345,16 +361,33 @@ export class Overlay {
         : 'Kimliği bilinmeyen kart yok — tüm el kesin.';
       tr.appendChild(unknown);
 
+      const truth = this._panelFor(player.name);
       const total = el('td', 'ct-td ct-total', String(player.totalMax));
       total.title = `toplam kart (${player.known} kesin + ${player.unknown} bilinmeyen)`;
+      if (truth && typeof truth.cards === 'number' && truth.cards !== player.totalMax) {
+        total.classList.add('ct-mismatch');
+        total.textContent = `${player.totalMax}≠${truth.cards}`;
+        total.title =
+          `Sayım tutmuyor: bende ${player.totalMax}, oyun panelinde ${truth.cards}.\n` +
+          'Bir log satırı kaçmış olabilir — ⟲ ile sıfırlayabilirsin.';
+        mismatches += 1;
+      }
       tr.appendChild(total);
 
       const dev = el('td', 'ct-td ct-dev', String(player.devCards));
       dev.title = 'elindeki oynanmamış gelişim kartı';
+      if (truth && typeof truth.devCards === 'number' && truth.devCards !== player.devCards) {
+        dev.classList.add('ct-mismatch');
+        dev.textContent = `${player.devCards}≠${truth.devCards}`;
+        dev.title = `Gelişim kartı: bende ${player.devCards}, oyun panelinde ${truth.devCards}.`;
+        mismatches += 1;
+      }
       tr.appendChild(dev);
 
       table.appendChild(tr);
     });
+
+    this.mismatches = mismatches;
   }
 
   _renderRolls(report) {

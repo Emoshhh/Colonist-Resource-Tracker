@@ -43,6 +43,24 @@ toplamı olan `?` sütunu. Hücrenin üstüne gelince üst sınır ve olasılık
 
 Toplam kart sayısı (Σ) her zaman kesindir — çalma toplamı değiştirmez, sadece yerini değiştirir.
 
+## Oyunun kendi paneliyle çapraz doğrulama
+
+Log tek kaynak değil: colonist sol üstteki oyuncu panelinde herkesin **toplam kart** ve
+**gelişim kartı** sayısını zaten yazıyor. Eklenti bu sayıları da okur
+(`data-resource-card` / `data-development-card` rozetleri) ve kendi hesabıyla karşılaştırır.
+
+- Sayılar tutuyorsa hiçbir şey görünmez — sessiz doğrulama.
+- Tutmuyorsa o hücre `7≠5` gibi kırmızı yazılır ve üstte
+  `⚠ N sayı oyun paneliyle uyuşmuyor` uyarısı çıkar. Yani bir log satırı kaçtıysa
+  bunu tahmin etmen gerekmez, panel anında söyler.
+
+Panel neden tek başına yetmez: yalnızca **kaç** kart olduğunu söyler, **hangi** kartlar
+olduğunu söylemez. Kart türlerini yalnızca log'dan çıkarabiliyoruz. İkisi birlikte
+kullanıldığında biri türü, diğeri toplamı garanti eder.
+
+Aynı panel "sen kimsin" sorusunu da kesin çözer: kendi satırında `currentUser` sınıfı
+bulunur, dolayısıyla botsuz/çok insanlı oyunlarda bile ad tahmin edilmez.
+
 ## Kurulum
 
 1. Bu depoyu indir.
@@ -59,6 +77,7 @@ Log, seninle ilgili satırları isimle değil ikinci tekil şahısla yazar:
 `You stole from Cuda`, `Giule stole from you`. Bunları işleyebilmek için eklentinin
 senin oyundaki adını bilmesi gerekir.
 
+- **Oyun panelinden otomatik (en güvenilir):** kendi satırın `currentUser` sınıfı taşır.
 - **Botlu oyunlarda otomatik:** mesajların avatar ikonu botu insandan ayırır
   (`icon_bot` vs `icon_player_loggedin`), bot olmayan tek oyuncu sensindir.
 - **Birden fazla insan varsa:** panelde kendi adına tıkla. Seçim tarayıcıda saklanır.
@@ -127,9 +146,13 @@ extension/
       parser.js           log satırı -> olay  (saf fonksiyon)
       tracker.js          olasılıklı el takibi (saf fonksiyon)
       game.js             olay -> durum uygulaması, zar istatistiği
-    dom/log-reader.js     colonist DOM'u -> parser girdisi
+    dom/
+      log-reader.js       colonist DOM'u -> parser girdisi
+      player-panel.js     oyunun kendi oyuncu paneli -> doğrulama sayıları
     ui/overlay.js         canlı panel
 test/                     node:test ile birim + uçtan uca testler
+  fixtures/               canlı oyundan kopyalanmış gerçek HTML
+  helpers/html.mjs        testler için minik HTML ayrıştırıcı
 ```
 
 Çekirdek (`core/`) tamamen DOM'dan bağımsızdır, bu yüzden doğrudan Node ile test edilir:
