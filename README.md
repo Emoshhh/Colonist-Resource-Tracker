@@ -90,8 +90,10 @@ yukarı kayanlar tamamen silinir. Yani eklenti geçmişi geriye dönük okuyamaz
 
 Panel "Oyun log'u bulunamadı" diyorsa ya da satırları tanımıyorsa, ham log'u görmek gerekir:
 
-**Yol 1 — panelden:** ⧉ düğmesi. Tanınmayan satırları + son 25 log satırının ham HTML'ini
-hem panoya kopyalar hem konsola basar.
+**Yol 1 — panelden:** ⧉ düğmesi. Tanınmayan satırları, o an görünen satırları ve
+**arşivlenen nadir satırları** (kart atma, gelişim kartı, tekel, çalma) hem panoya
+kopyalar hem konsola basar. Nadir satırlar geçerken kaydedildiği için 7'nin geldiği
+anı yakalamak zorunda değilsin — oyun sonunda bir kez ⧉'ye basman yeter.
 
 **Yol 2 — konsoldan (eklenti çalışmasa da olur):** oyundayken `F12` → **Console** sekmesi
 (Sources değil), `tools/dump-log.js` dosyasının içeriğini yapıştır, Enter. Sonra `copy(__ctDump)`

@@ -27,6 +27,14 @@ export const LOG_SELECTORS = [
 const LOG_LINE_RE =
   /\b(rolled|placed a|received starting resources|got|built a|bought|stole|discarded|gave|took|used|moved robber|wants to give)\b/i;
 
+/**
+ * Nadir görülen ve kalıbı doğrulanması gereken satırlar.
+ * Sanal kaydırıcı bunları birkaç saniye sonra siliyor; hata ayıklama dökümünde
+ * elimizde kalsın diye geçerken ham HTML'leri saklanır.
+ */
+const ARCHIVE_RE = /\b(discarded|used|bought|stole|monopoly|took from bank|development card)\b/i;
+const ARCHIVE_LIMIT = 60;
+
 /** Bu eleman gerçekten log kutusu mu? (sohbet kutusu da sanal kaydırıcı olabilir) */
 function looksLikeLog(el, minHits = 2) {
   if (!el || el.children.length < 2) return false;
@@ -196,6 +204,7 @@ export class LogWatcher {
     this.seen = new WeakSet();
     this.lastIndex = -1;
     this.lastCount = 0;
+    this.archive = [];
     this.observer = null;
     this.timer = null;
   }
@@ -246,7 +255,16 @@ export class LogWatcher {
   _reset() {
     this.seen = new WeakSet();
     this.lastIndex = -1;
+    this.archive = [];
     this.onReset();
+  }
+
+  /** Nadir satırların ham HTML'ini sakla (kaydırıcı silmeden önce). */
+  _archiveRow(el, idx) {
+    const text = el.textContent || '';
+    if (!ARCHIVE_RE.test(text)) return;
+    this.archive.push({ idx, html: el.outerHTML });
+    if (this.archive.length > ARCHIVE_LIMIT) this.archive.shift();
   }
 
   /** Log kutusunu yeniden ara (panelde ⟲ düğmesi). */
@@ -291,6 +309,7 @@ export class LogWatcher {
       const missed = this.lastIndex < 0 ? idx : idx - this.lastIndex - 1;
       if (missed > 0) this.onGap(missed);
       this.lastIndex = idx;
+      this._archiveRow(el, idx);
       const parts = elementToParts(el);
       if (hasContent(parts)) this.onMessage(parts, el);
     }
@@ -306,6 +325,12 @@ export class LogWatcher {
       .slice(0, 25)
       .map((c) => c.outerHTML)
       .join('\n\n');
-    return `${desc}\n\n${rows}`;
+
+    const archived = this.archive.length
+      ? `\n\n--- arşivlenen nadir satırlar (${this.archive.length}) ---\n\n` +
+        this.archive.map((r) => `[${r.idx}] ${r.html}`).join('\n\n')
+      : '\n\n--- arşivlenen nadir satır yok ---';
+
+    return `${desc}\n\n${rows}${archived}`;
   }
 }
