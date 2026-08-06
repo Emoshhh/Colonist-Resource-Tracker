@@ -325,6 +325,34 @@ test('gerçek DOM: "Carie49985693 stole <Ore> from you" (rakamlı isim)', () => 
   assert.equal(ev.res, 'ore');
 });
 
+test('gerçek DOM: "Carie49985693 moved Robber 🦹 to <prob_6> <grain tile>"', () => {
+  // Elements panelinden birebir (data-index 98): oyuncu adı + haydut ikonu +
+  // sayı fişi + arazi altıgeni. Arazi ikonunun adında "grain" geçiyor.
+  const parts = elementToParts(
+    row([
+      player('Carie49985693', '#CF4449'),
+      textNode(' moved Robber '),
+      element('img', { attrs: { src: `${CDN}/icon_robber.2b909f2aabbccdd.svg`, alt: 'robber' } }),
+      textNode(' to '),
+      element('img', { attrs: { src: `${CDN}/prob_6.ada0b84aabbccdd.svg`, alt: 'prob_6' } }),
+      element('img', {
+        attrs: { src: `${CDN}/generated_tile_grain.50fd577aabbccdd.svg`, alt: 'grain tile' },
+      }),
+    ]),
+  );
+
+  const g = new Game();
+  g.setupPhase = false;
+  g.addPlayer('Carie49985693');
+  const ev = parseMessage(parts, { players: ['Carie49985693'] });
+  assert.equal(ev.kind, 'ignore');
+
+  g.applyEvent(ev);
+  const rep = g.report();
+  assert.equal(rep.players[0].totalMax, 0, 'haydut hareketi kart eklememeli');
+  assert.equal(rep.unknownCount, 0);
+});
+
 test('gerçek DOM: "Emosh used Knight" — ikon adı beklenmedik olsa da metinden anlaşılır', () => {
   const parts = elementToParts(
     row(
