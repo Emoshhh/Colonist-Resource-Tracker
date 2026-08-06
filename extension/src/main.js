@@ -5,6 +5,7 @@
 import { Game } from './core/game.js';
 import { parseMessage, playersIn, avatarOf } from './core/parser.js';
 import { LogWatcher, findOwnUsername } from './dom/log-reader.js';
+import { imageToResource, isDevCardImage } from './core/resources.js';
 import { Overlay } from './ui/overlay.js';
 
 const DEBUG = false;
@@ -27,6 +28,22 @@ try {
   manualMe = localStorage.getItem(ME_KEY);
 } catch {
   manualMe = null;
+}
+
+/**
+ * Panel başlığında oyunun kendi kart görsellerini kullanabilmek için
+ * log'da geçen ikon adreslerini topla. Dosya adlarındaki build hash'i
+ * sürümle değiştiğinden sabit adres yerine görüleni kullanmak daha sağlam.
+ */
+function collectIcons(parts) {
+  const found = {};
+  for (const part of parts) {
+    if (part.t !== 'img' || !part.v) continue;
+    const res = imageToResource(part.v);
+    if (res) found[res] = part.v;
+    else if (isDevCardImage(part.v)) found.devcard = part.v;
+  }
+  if (Object.keys(found).length) overlay.setIcons(found);
 }
 
 function noteAvatar(parts) {
@@ -96,6 +113,7 @@ function handleMessage(parts) {
     if (name && !/^you$/i.test(name)) game.addPlayer(name);
   }
 
+  collectIcons(parts);
   noteAvatar(parts);
   me = resolveMe();
   overlay.setMe(me);

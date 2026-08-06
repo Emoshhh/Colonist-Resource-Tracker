@@ -108,6 +108,14 @@
   font-weight: 600;
 }
 
+#colonist-tracker .ct-icon {
+  display: block;
+  height: 20px;
+  width: auto;
+  margin: 0 auto;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
+}
+
 #colonist-tracker .ct-chip {
   display: inline-block;
   width: 16px;

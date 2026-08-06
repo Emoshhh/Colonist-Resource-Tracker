@@ -20,7 +20,12 @@ import assert from 'node:assert/strict';
 
 import { elementToParts, hasContent } from '../extension/src/dom/log-reader.js';
 import { parseMessage, playersIn } from '../extension/src/core/parser.js';
-import { normalizeImageName, imageToResource } from '../extension/src/core/resources.js';
+import {
+  normalizeImageName,
+  imageToResource,
+  RESOURCES,
+  DEFAULT_CARD_ICONS,
+} from '../extension/src/core/resources.js';
 import { Game } from '../extension/src/core/game.js';
 
 const CDN = 'https://cdn.colonist.io/dist/assets';
@@ -90,6 +95,14 @@ test('build hash içeren ikon adları normalize edilir', () => {
   assert.equal(imageToResource(`${CDN}/card_lumber.aa11bb22cc33dd44.svg`), 'lumber');
   assert.equal(imageToResource(`${CDN}/settlement_blue.bad4cdb43d65c329deda.svg`), null);
   assert.equal(imageToResource(`${CDN}/icon_bot.551858c518b9f2f8357a.svg`), null);
+});
+
+test('panel başlığındaki yedek kart görselleri doğru kaynağa çözülür', () => {
+  for (const res of RESOURCES) {
+    const url = DEFAULT_CARD_ICONS[res];
+    assert.ok(url, `${res} için yedek görsel tanımlı olmalı`);
+    assert.equal(imageToResource(url), res, `${url} -> ${res}`);
+  }
 });
 
 test('gerçek satır: "Melvin placed a Settlement"', () => {

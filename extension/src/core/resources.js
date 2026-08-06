@@ -28,6 +28,21 @@ export const RES_COLOR = {
   ore: '#6b7b8c',
 };
 
+/**
+ * Panel başlığında kullanılacak kart görselleri için yedek adresler.
+ * Colonist dosya adlarına build hash'i eklediği için bunlar eskiyebilir;
+ * asıl adresler oyun log'unda görülen ikonlardan canlı toplanır
+ * (bkz. main.js -> collectIcons). Bu liste yalnız ilk kart görülene kadar
+ * ve görsel yüklenemezse devreye girer.
+ */
+export const DEFAULT_CARD_ICONS = {
+  lumber: 'https://cdn.colonist.io/dist/assets/card_lumber.cf22f8083cf89c2a29e7.svg',
+  brick: 'https://cdn.colonist.io/dist/assets/card_brick.5950ea07a7ea01bc54a5.svg',
+  wool: 'https://cdn.colonist.io/dist/assets/card_wool.17a6dea8d559949f0ccc.svg',
+  grain: 'https://cdn.colonist.io/dist/assets/card_grain.09c9d82146a64bce69b5.svg',
+  ore: 'https://cdn.colonist.io/dist/assets/card_ore.117f64dab28e1c987958.svg',
+};
+
 /** colonist.io ikon dosya adı -> kaynak. */
 export const IMAGE_TO_RESOURCE = {
   card_lumber: 'lumber',

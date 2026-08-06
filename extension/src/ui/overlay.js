@@ -2,7 +2,7 @@
  * Canlı panel. Oyunun üstünde sabit duran, sürüklenebilir bir tablo.
  */
 
-import { RESOURCES, RES_LABEL, RES_COLOR } from '../core/resources.js';
+import { RESOURCES, RES_LABEL, RES_COLOR, DEFAULT_CARD_ICONS } from '../core/resources.js';
 
 const STORAGE_KEY = 'colonist-tracker-ui';
 
@@ -38,6 +38,19 @@ export class Overlay {
     this.showRolls = this.ui.showRolls ?? true;
     this.root = null;
     this.me = null;
+    this.icons = {};
+  }
+
+  /** Log'da görülen gerçek kart görsellerini kullan (hash'ler sürümle değişiyor). */
+  setIcons(icons) {
+    let changed = false;
+    for (const [key, url] of Object.entries(icons)) {
+      if (url && this.icons[key] !== url) {
+        this.icons[key] = url;
+        changed = true;
+      }
+    }
+    return changed;
   }
 
   mount() {
@@ -189,6 +202,31 @@ export class Overlay {
     this.footer.textContent = `${certainty}${report.setupPhase ? ' · kurulum' : ''}`;
   }
 
+  /**
+   * Başlık hücresi: oyunun kendi kart görseli.
+   * Görsel yoksa ya da yüklenemezse renkli harf rozetine düşer.
+   */
+  _resourceIcon(res) {
+    const src = this.icons[res] || DEFAULT_CARD_ICONS[res];
+    const chip = () => {
+      const node = el('span', 'ct-chip', RES_LABEL[res][0]);
+      node.style.background = RES_COLOR[res];
+      node.title = RES_LABEL[res];
+      return node;
+    };
+    if (!src) return chip();
+
+    const img = el('img', 'ct-icon');
+    img.src = src;
+    img.alt = RES_LABEL[res];
+    img.title = RES_LABEL[res];
+    img.addEventListener('error', () => {
+      const parent = img.parentNode;
+      if (parent) parent.replaceChild(chip(), img);
+    });
+    return img;
+  }
+
   _renderTable(report) {
     const table = this.table;
     table.textContent = '';
@@ -197,14 +235,23 @@ export class Overlay {
     head.appendChild(el('th', 'ct-th ct-name', ''));
     RESOURCES.forEach((res) => {
       const th = el('th', 'ct-th');
-      const chip = el('span', 'ct-chip', RES_LABEL[res][0]);
-      chip.style.background = RES_COLOR[res];
-      chip.title = RES_LABEL[res];
-      th.appendChild(chip);
+      th.appendChild(this._resourceIcon(res));
       head.appendChild(th);
     });
     head.appendChild(el('th', 'ct-th', 'Σ'));
-    head.appendChild(el('th', 'ct-th', 'GK'));
+
+    const devTh = el('th', 'ct-th');
+    if (this.icons.devcard) {
+      const devImg = el('img', 'ct-icon');
+      devImg.src = this.icons.devcard;
+      devImg.alt = 'Gelişim kartı';
+      devImg.title = 'Elindeki oynanmamış gelişim kartı';
+      devTh.appendChild(devImg);
+    } else {
+      devTh.textContent = 'GK';
+      devTh.title = 'Gelişim kartı';
+    }
+    head.appendChild(devTh);
     table.appendChild(head);
 
     if (!report.players.length) {
