@@ -42,6 +42,11 @@ export const SNIPPETS = {
     'is blocked by the robber',
     'no resources produced',
     'selecting cards to discard',
+    // haydut / ambargo bilgilendirmeleri
+    'friendly robber is active',
+    'tiles available to block',
+    'no player to steal from',
+    'blocked trading with',
     'longest road',
     'largest army',
     'is now the owner',

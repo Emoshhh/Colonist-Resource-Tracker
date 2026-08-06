@@ -369,6 +369,144 @@ test('gerçek DOM: "Emosh used Knight" — ikon adı beklenmedik olsa da metinde
   assert.equal(ev.card, 'knight');
 });
 
+/**
+ * Gelişim kartı oynama satırı iç içe geçmiş bir tooltip kutusu kullanıyor:
+ *   <span>Emosh used </span>
+ *   <div class="tooltipTrigger-..."><span> Knight <img card_knight></span></div>
+ *   <span></span>
+ */
+function devCardRow(name, color, label, iconFile, iconAlt) {
+  return element('div', {
+    className: 'scrollItemContainer-WXX2rkzf',
+    attrs: { 'data-index': '337' },
+    children: [
+      element('div', {
+        className: 'feedMessage-O8TLknGe',
+        children: [
+          avatarHuman(),
+          element('span', {
+            className: 'messagePart-XeUsOgLX',
+            children: [player(name, color), textNode(' used ')],
+          }),
+          element('div', {
+            className: 'tooltipTrigger-RHbo1Dby messageWithTooltip-NtPXPG_9',
+            children: [
+              element('span', {
+                children: [
+                  textNode(` ${label} `),
+                  element('img', {
+                    className: 'lobbyChatTextIcon',
+                    attrs: { src: `${CDN}/${iconFile}`, alt: iconAlt },
+                  }),
+                  textNode(' '),
+                ],
+              }),
+            ],
+          }),
+          element('span', { className: 'messagePart-XeUsOgLX', children: [] }),
+        ],
+      }),
+    ],
+  });
+}
+
+test('gerçek DOM: tooltip içindeki "used Knight"', () => {
+  const parts = elementToParts(
+    devCardRow('Emosh', '#3D3D3D', 'Knight', 'card_knight.a58573f2154fa93a6319.svg', 'Knight'),
+  );
+  const ev = parseMessage(parts, { players: ['Emosh'] });
+  assert.equal(ev.kind, 'playDev');
+  assert.equal(ev.card, 'knight');
+  assert.equal(ev.player, 'Emosh');
+});
+
+test('gerçek DOM: "used Year of Plenty" + ardından "took from bank"', () => {
+  const g = new Game();
+  g.setupPhase = false;
+  const feed = (parts) => {
+    for (const n of playersIn(parts, g.players)) g.addPlayer(n);
+    g.applyEvent(parseMessage(parts, { players: g.players }));
+  };
+
+  g.addPlayer('Rhody0146');
+  g.tracker.devCardBought('Rhody0146');
+
+  feed(
+    elementToParts(
+      devCardRow(
+        'Rhody0146',
+        '#CF4449',
+        'Year of Plenty',
+        'card_yearofplenty.3df210b5455b7438db09.svg',
+        'Year of Plenty',
+      ),
+    ),
+  );
+  feed(
+    elementToParts(
+      row([
+        player('Rhody0146', '#CF4449'),
+        textNode(' took from bank '),
+        card('ore', 'Ore'),
+        card('ore', 'Ore'),
+      ]),
+    ),
+  );
+
+  const rep = g.report();
+  const p = rep.players.find((x) => x.name === 'Rhody0146');
+  assert.equal(rep.unknownCount, 0);
+  assert.equal(p.devCards, 0, 'oynanan kart sayaçtan düştü');
+  assert.equal(p.res.find((r) => r.res === 'ore').min, 2, 'bankadan 2 maden alındı');
+});
+
+test('gerçek DOM: "You stole <Brick> from Rhody0146" (tek oyuncu span)', () => {
+  const parts = elementToParts(
+    row([textNode('You stole '), card('brick', 'Brick'), textNode(' from '), player('Rhody0146', '#CF4449')], {
+      bot: false,
+    }),
+  );
+  const ev = parseMessage(parts, { players: ['Rhody0146', 'Emosh'], me: 'Emosh' });
+  assert.equal(ev.kind, 'stealKnown');
+  assert.equal(ev.thief, 'Emosh');
+  assert.equal(ev.victim, 'Rhody0146');
+  assert.equal(ev.res, 'brick');
+});
+
+test('gerçek DOM: ödül ve haydut bilgilendirme satırları yok sayılır', () => {
+  const lines = [
+    // "Largest Army 🎖 passed from Rhody0146 to Emosh (+2 VPs)" — iki oyuncu adı var,
+    // takas sanılmamalı.
+    [
+      textNode('Largest Army '),
+      element('img', { attrs: { src: `${CDN}/icon_largest_army.206b49b3.svg`, alt: 'largest army' } }),
+      textNode(' passed from '),
+      player('Rhody0146', '#CF4449'),
+      textNode(' to '),
+      player('Emosh', '#3D3D3D'),
+      textNode(' ('),
+      element('span', { className: 'vp-text', children: [textNode('+2 VPs')] }),
+      textNode(')'),
+    ],
+    [
+      textNode('Longest Road '),
+      element('img', { attrs: { src: `${CDN}/icon_longest_road.5cfdeb33.svg`, alt: 'longest road' } }),
+      textNode(' passed from '),
+      player('Rhody0146', '#CF4449'),
+      textNode(' to '),
+      player('Emosh', '#3D3D3D'),
+    ],
+    [player('Emosh', '#3D3D3D'), textNode(' blocked trading with '), player('Rhody0146', '#CF4449')],
+    [textNode('Friendly Robber is active, tiles available to block are limited')],
+    [textNode('No player to steal from')],
+  ];
+
+  for (const children of lines) {
+    const ev = parseMessage(elementToParts(row(children)), { players: ['Emosh', 'Rhody0146'] });
+    assert.equal(ev.kind, 'ignore', `yok sayılmalı: ${elementToParts(row(children)).map((p) => p.v).join(' ')}`);
+  }
+});
+
 test('çaldığım kart görünüyorsa kesin çalma olarak işlenir', () => {
   const ev = parseMessage(
     elementToParts(row([textNode('You stole '), card('ore', 'Ore'), textNode(' from '), CUDA()], { bot: false })),
