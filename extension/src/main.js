@@ -5,7 +5,7 @@
 import { Game } from './core/game.js';
 import { parseMessage, playersIn, avatarOf } from './core/parser.js';
 import { LogWatcher, findOwnUsername } from './dom/log-reader.js';
-import { imageToResource, isDevCardImage } from './core/resources.js';
+import { imageToResource, isDevCardImage, isHiddenCardImage } from './core/resources.js';
 import { Overlay } from './ui/overlay.js';
 
 const DEBUG = false;
@@ -42,6 +42,7 @@ function collectIcons(parts) {
     const res = imageToResource(part.v);
     if (res) found[res] = part.v;
     else if (isDevCardImage(part.v)) found.devcard = part.v;
+    else if (isHiddenCardImage(part.v)) found.unknown = part.v;
   }
   if (Object.keys(found).length) overlay.setIcons(found);
 }

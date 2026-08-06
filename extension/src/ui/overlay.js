@@ -36,6 +36,7 @@ export class Overlay {
     this.onPickMe = onPickMe || (() => {});
     this.ui = loadUiState();
     this.showRolls = this.ui.showRolls ?? true;
+    this.showProbabilities = this.ui.showProbabilities ?? false;
     this.root = null;
     this.me = null;
     this.icons = {};
@@ -73,6 +74,17 @@ export class Overlay {
       saveUiState(this.ui);
       this.rollsBox.style.display = this.showRolls ? '' : 'none';
     };
+    const probBtn = el('button', 'ct-btn', '%');
+    probBtn.title = 'Olasılıklı görünüm: kesin sayı yerine beklenen değer göster';
+    probBtn.onclick = () => {
+      this.showProbabilities = !this.showProbabilities;
+      this.ui.showProbabilities = this.showProbabilities;
+      saveUiState(this.ui);
+      probBtn.classList.toggle('ct-btn-on', this.showProbabilities);
+      if (this.lastReport) this.render(this.lastReport);
+    };
+    probBtn.classList.toggle('ct-btn-on', this.showProbabilities);
+
     const resetBtn = el('button', 'ct-btn', '⟲');
     resetBtn.title = 'Sayacı sıfırla ve log’u baştan oku';
     resetBtn.onclick = () => this.onReset();
@@ -83,7 +95,7 @@ export class Overlay {
     minBtn.title = 'Küçült';
     minBtn.onclick = () => this.toggleCollapse();
 
-    actions.append(rollsBtn, resetBtn, debugBtn, minBtn);
+    actions.append(probBtn, rollsBtn, resetBtn, debugBtn, minBtn);
     header.append(title, actions);
 
     // --- gövde
@@ -185,6 +197,7 @@ export class Overlay {
   /** report(): Game#report() çıktısı */
   render(report) {
     if (!this.root) return;
+    this.lastReport = report;
     this._renderTable(report);
     this._renderRolls(report);
 
@@ -238,6 +251,20 @@ export class Overlay {
       th.appendChild(this._resourceIcon(res));
       head.appendChild(th);
     });
+
+    const unknownTh = el('th', 'ct-th');
+    if (this.icons.unknown) {
+      const img = el('img', 'ct-icon');
+      img.src = this.icons.unknown;
+      img.alt = 'Bilinmeyen';
+      unknownTh.appendChild(img);
+    } else {
+      unknownTh.textContent = '?';
+    }
+    unknownTh.title = 'Türü bilinmeyen kartlar (çalınanlar)';
+    unknownTh.classList.add('ct-unknown');
+    head.appendChild(unknownTh);
+
     head.appendChild(el('th', 'ct-th', 'Σ'));
 
     const devTh = el('th', 'ct-th');
@@ -257,7 +284,7 @@ export class Overlay {
     if (!report.players.length) {
       const tr = el('tr', 'ct-row');
       const td = el('td', 'ct-td ct-empty');
-      td.colSpan = 8;
+      td.colSpan = 9;
       td.textContent =
         this.status === 'connected'
           ? 'Log’a bağlandı, ilk hamle bekleniyor…'
@@ -277,26 +304,35 @@ export class Overlay {
 
       player.res.forEach((cell) => {
         const td = el('td', 'ct-td');
-        if (cell.certain) {
-          td.textContent = String(cell.min);
-          if (cell.min === 0) td.classList.add('ct-zero');
-          td.title = 'kesin';
-        } else {
+        if (this.showProbabilities && !cell.certain) {
+          // olasılıklı görünüm: beklenen değer + aralık
           td.classList.add('ct-uncertain');
           td.textContent = cell.mean.toFixed(1);
-          const range = el('span', 'ct-range', `${cell.min}-${cell.max}`);
-          td.appendChild(range);
-          td.title =
-            `en az ${cell.min}, en fazla ${cell.max}\n` +
-            `beklenen ${cell.mean.toFixed(2)}\n` +
-            `en az 1 tane bulundurma: %${Math.round(cell.p * 100)}`;
-          td.style.background = `rgba(255, 176, 32, ${0.10 + 0.30 * cell.p})`;
+          td.appendChild(el('span', 'ct-range', `${cell.min}-${cell.max}`));
+          td.style.background = `rgba(255, 176, 32, ${0.1 + 0.3 * cell.p})`;
+        } else {
+          // kesin görünüm: garanti alt sınır (fazlası "?" sütununda)
+          td.textContent = String(cell.min);
+          if (cell.min === 0) td.classList.add('ct-zero');
+          if (!cell.certain) td.classList.add('ct-maybe');
         }
+        td.title = cell.certain
+          ? `${RES_LABEL[cell.res]}: kesin ${cell.min}`
+          : `${RES_LABEL[cell.res]}: kesin ${cell.min}, en fazla ${cell.max}\n` +
+            `beklenen ${cell.mean.toFixed(2)} · en az 1 bulundurma %${Math.round(cell.p * 100)}`;
         tr.appendChild(td);
       });
 
+      const unknown = el('td', 'ct-td ct-unknown', String(player.unknown));
+      if (!player.unknown) unknown.classList.add('ct-zero');
+      unknown.title = player.unknown
+        ? `${player.unknown} kartın türü bilinmiyor (çalınan kartlar).\n` +
+          'Rakip harcama yaptıkça bu sayı kendiliğinden çözülür.'
+        : 'Kimliği bilinmeyen kart yok — tüm el kesin.';
+      tr.appendChild(unknown);
+
       const total = el('td', 'ct-td ct-total', String(player.totalMax));
-      total.title = 'toplam kart';
+      total.title = `toplam kart (${player.known} kesin + ${player.unknown} bilinmeyen)`;
       tr.appendChild(total);
 
       const dev = el('td', 'ct-td ct-dev', String(player.devCards));

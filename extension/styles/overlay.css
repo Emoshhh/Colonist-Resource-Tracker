@@ -3,7 +3,7 @@
   top: 90px;
   right: 16px;
   z-index: 2147483000;
-  width: 320px;
+  width: 348px;
   font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 12px;
   color: #e8ecf1;
@@ -86,8 +86,8 @@
 
 #colonist-tracker .ct-name {
   text-align: left;
-  width: 78px;
-  max-width: 78px;
+  width: 76px;
+  max-width: 76px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -139,6 +139,27 @@
 #colonist-tracker .ct-uncertain {
   color: #ffd88a;
   border-radius: 4px;
+}
+
+/* kesin sayı gösterilirken "daha fazlası olabilir" işareti */
+#colonist-tracker .ct-maybe {
+  text-decoration: underline dotted #c9a15a;
+  text-underline-offset: 2px;
+}
+
+#colonist-tracker .ct-unknown {
+  color: #ffd88a;
+  font-weight: 600;
+}
+
+#colonist-tracker .ct-unknown.ct-zero {
+  color: #55606d;
+  font-weight: 400;
+}
+
+#colonist-tracker .ct-btn-on {
+  background: rgba(255, 176, 32, 0.25);
+  color: #ffd88a;
 }
 
 #colonist-tracker .ct-range {

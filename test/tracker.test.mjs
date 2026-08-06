@@ -51,6 +51,48 @@ test('bilinmeyen çalma dallanır ve olasılıkları taşır', () => {
   assert.equal(a.totalMax, 1);
 });
 
+test('çalınan kart "bilinmeyen" sütununa düşer, kaynak sütunları kesin kalır', () => {
+  const t = new Tracker(['A', 'B']);
+  t.gain('B', toVector({ ore: 3, wool: 1 }));
+
+  let rep = t.report();
+  let a = rep.players.find((p) => p.name === 'A');
+  let b = rep.players.find((p) => p.name === 'B');
+  assert.equal(b.known, 4);
+  assert.equal(b.unknown, 0, 'çalma öncesi her kart bilinir');
+
+  t.stealUnknown('A', 'B');
+  rep = t.report();
+  a = rep.players.find((p) => p.name === 'A');
+  b = rep.players.find((p) => p.name === 'B');
+
+  // Hırsızın elindeki tek kartın türü bilinmiyor
+  assert.equal(a.known, 0);
+  assert.equal(a.unknown, 1);
+  assert.equal(a.totalMax, 1);
+
+  // Kurbanda kesin olan: 2 maden (3'ten biri gitmiş olabilir); 1 kart belirsiz
+  assert.equal(cell(rep, 'B', 'ore').min, 2);
+  assert.equal(cell(rep, 'B', 'wool').min, 0);
+  assert.equal(b.known, 2);
+  assert.equal(b.unknown, 1);
+  assert.equal(b.totalMax, 3);
+});
+
+test('bilinmeyen sütunu belirsizlik çözülünce boşalır', () => {
+  const t = new Tracker(['A', 'B']);
+  t.gain('B', toVector({ ore: 1, grain: 1 }));
+  t.stealUnknown('A', 'B');
+  assert.equal(t.report().players.find((p) => p.name === 'A').unknown, 1);
+
+  t.lose('B', toVector({ ore: 1 })); // B madenini attı -> A buğday çalmış
+  const rep = t.report();
+  const a = rep.players.find((p) => p.name === 'A');
+  assert.equal(a.unknown, 0, 'kimlik çözüldü');
+  assert.equal(a.known, 1);
+  assert.equal(cell(rep, 'A', 'grain').min, 1);
+});
+
 test('sonraki hamle imkânsız dalları eleyerek belirsizliği çözer', () => {
   const t = new Tracker(['A', 'B']);
   t.gain('B', toVector({ ore: 1, grain: 1 }));

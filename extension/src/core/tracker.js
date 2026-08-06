@@ -251,6 +251,11 @@ export class Tracker {
    *  mean     -> beklenen değer
    *  p        -> en az 1 tane bulundurma olasılığı
    *  certain  -> min === max
+   *
+   * Ayrıca oyuncu başına:
+   *  known    -> kesin bilinen kart sayısı (min'lerin toplamı)
+   *  unknown  -> elinde olduğu kesin ama türü bilinmeyen kart sayısı
+   *              (toplam - kesin bilinen). Çalınan kartlar burada durur.
    */
   report() {
     const players = this.players.map((name, p) => {
@@ -291,12 +296,17 @@ export class Tracker {
         delete cell._i;
       });
 
+      const known = res.reduce((sum, cell) => sum + cell.min, 0);
+      const total = Number.isFinite(totalMax) ? totalMax : 0;
+
       return {
         name,
         res,
         devCards: this.devCards.get(name) || 0,
         totalMin: Number.isFinite(totalMin) ? totalMin : 0,
-        totalMax: Number.isFinite(totalMax) ? totalMax : 0,
+        totalMax: total,
+        known,
+        unknown: Math.max(0, total - known),
       };
     });
 

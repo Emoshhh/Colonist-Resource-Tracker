@@ -5,17 +5,24 @@ Oyun ekranındaki genel oyun log'unu okur, zar dağıtımlarını ve hamleleri i
 ve ekranın köşesinde sürüklenebilir bir panelde gösterir.
 
 ```
-┌──────────────────────────────┐
-│ ● Kaynak Takibi   🎲 ⟲ ⧉ –   │
-├──────────────────────────────┤
-│         O  T  K  B  M  Σ  GK │
-│ Ali     1  0  2  1  0  4   1 │   ← kesin bilinen
-│ Veli    0  1  0.7 0  1.3 3  0│   ← çalınan karttan gelen belirsizlik
-│         ^ 0-1     ^ 1-2      │
-├──────────────────────────────┤
-│ ▁▃█▅▂▁▃▁▂▁▁  2..12 · 41 zar  │
-└──────────────────────────────┘
+┌────────────────────────────────────┐
+│ ● Kaynak Takibi    % 🎲 ⟲ ⧉ –      │
+├────────────────────────────────────┤
+│        🌲 🧱 🐑 🌾 ⛏  ?  Σ  GK     │
+│ Ali     1  0  2  1  0  0  4   1    │  ← eli tamamen biliniyor
+│ Veli    0  1  1  0  1  2  5   0    │  ← 2 kartın türü bilinmiyor
+│              ‾        ‾            │  ← noktalı alt çizgi: daha fazlası olabilir
+├────────────────────────────────────┤
+│ ▁▃█▅▂▁▃▁▂▁▁  2..12 · 41 zar        │
+└────────────────────────────────────┘
 ```
+
+Kaynak sütunlarında **kesin olarak bildiğimiz** sayı yazar — "en az bu kadar var".
+Çalma yüzünden türü belirsiz kalan kartlar tahmine dağıtılmaz, `?` sütununda toplanır.
+Rakip harcama yaptıkça `?` kendiliğinden erir ve kartlar gerçek sütunlarına geçer.
+
+`%` düğmesiyle olasılıklı görünüme geçebilirsin: orada kesin sayı yerine beklenen
+değer (`1.4`) ve alt–üst sınır (`1-2`) gösterilir.
 
 ## Nasıl çalışır
 
@@ -30,9 +37,9 @@ Bu yüzden takip motoru tek bir tahmin tutmaz, **olası tüm dağılımları par
    elinde odun+tuğla olmayan dallar düşer.
 3. Böylece belirsizlik zamanla kendiliğinden çözülür ve panel yine kesin sayılara döner.
 
-Panelde kesin bilinen değerler düz sayı, belirsiz olanlar **beklenen değer + alt-üst sınır**
-(`0-1` gibi) olarak sarı zeminde gösterilir. Hücrenin üstüne gelince
-"en az 1 tane bulundurma olasılığı" da görünür.
+Panel bu iç durumu iki sayıya indirger: her kaynak için **garanti alt sınır**
+(tüm olası dağılımlarda en az bu kadar var) ve geri kalan belirsiz kartların
+toplamı olan `?` sütunu. Hücrenin üstüne gelince üst sınır ve olasılık da görünür.
 
 Toplam kart sayısı (Σ) her zaman kesindir — çalma toplamı değiştirmez, sadece yerini değiştirir.
 
@@ -61,6 +68,7 @@ senin oyundaki adını bilmesi gerekir.
 
 | Düğme | İşlev |
 |-------|-------|
+| % | Olasılıklı görünüm: kesin sayı yerine beklenen değer + aralık |
 | 🎲 | Zar istatistiği grafiğini aç/kapat |
 | ⟲ | Sayacı sıfırla ve log'u baştan oku |
 | ⧉ | Tanınmayan log satırlarını + ham log'u panoya kopyala |
