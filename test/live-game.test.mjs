@@ -307,6 +307,40 @@ test('"Arlen stole 🌾 from you" — benden çalınan kart görünür, kesin i�
   assert.equal(ev.victim, 'Emosh');
 });
 
+test('gerçek DOM: "Carie49985693 stole <Ore> from you" (rakamlı isim)', () => {
+  // Elements panelinden birebir alınan yapı (data-index 99).
+  const parts = elementToParts(
+    row([
+      player('Carie49985693', '#CF4449'),
+      textNode(' stole '),
+      card('ore', 'Ore'),
+      textNode(' from you'),
+    ]),
+  );
+
+  const ev = parseMessage(parts, { players: ['Carie49985693', 'Emosh'], me: 'Emosh' });
+  assert.equal(ev.kind, 'stealKnown', 'benden çalınan kart görünür');
+  assert.equal(ev.thief, 'Carie49985693');
+  assert.equal(ev.victim, 'Emosh');
+  assert.equal(ev.res, 'ore');
+});
+
+test('gerçek DOM: "Emosh used Knight" — ikon adı beklenmedik olsa da metinden anlaşılır', () => {
+  const parts = elementToParts(
+    row(
+      [
+        player('Emosh', '#3D3D3D'),
+        textNode(' used Knight '),
+        element('img', { attrs: { src: `${CDN}/icon_unexpected_name.abcdef123456.svg`, alt: 'knight' } }),
+      ],
+      { bot: false },
+    ),
+  );
+  const ev = parseMessage(parts, { players: ['Emosh'] });
+  assert.equal(ev.kind, 'playDev');
+  assert.equal(ev.card, 'knight');
+});
+
 test('çaldığım kart görünüyorsa kesin çalma olarak işlenir', () => {
   const ev = parseMessage(
     elementToParts(row([textNode('You stole '), card('ore', 'Ore'), textNode(' from '), CUDA()], { bot: false })),
