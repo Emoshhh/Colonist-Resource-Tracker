@@ -127,6 +127,7 @@ Başlık çubuğundan sürükleyerek taşıyabilirsin; konum ve durum `localStor
 | `N sayı oyun paneliyle uyuşmuyor` | Fark henüz taze; birkaç saniye içinde ya kendiliğinden kapanır ya da düzeltilir. |
 | `N satır okunamadı` | Sanal kaydırıcı yüzünden satır kaçtı (aşağıya bak). |
 | `N log satırı hesapla çelişti` | Bir hamle mevcut duruma göre imkânsızdı. Motor durumu bozmaz, son geçerli hâlini korur. |
+| `olasılık ağacı kırpıldı` | Çok fazla belirsiz çalma birikti, olasılık ağacı sınıra dayandı. Toplamlar hâlâ doğru ama kaynak alt/üst sınırları artık garanti değil. ⟲ ile temizlenir. |
 | `N satır tanınmadı` | Metin kalıbı eşleşmedi — ⧉ ile döküm al. |
 | `N "sen" satırı işlenemedi` | Kendi adın çözülemedi; panelde adına tıkla. |
 

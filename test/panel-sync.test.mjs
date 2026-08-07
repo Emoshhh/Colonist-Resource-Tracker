@@ -135,6 +135,15 @@ test('tanınmayan oyuncu ve aşırı fark yok sayılır', () => {
   assert.equal(of(g.report(), 'Emosh').totalMax, 1);
 });
 
+test('dünya kırpması sessizce yapılmaz, sayaca yazılır', () => {
+  const t = new Tracker(['A', 'B']);
+  t.worldCap = 3; // gerçekte 4000; testte kırpmayı zorlamak için düşürüldü
+  t.gain('A', toVector({ lumber: 2, brick: 2, wool: 2, grain: 2, ore: 2 }));
+  t.gainUnknown('A', 2); // 15 farklı dünya -> 3'e kırpılır
+  assert.ok(t.pruned > 0, 'kırpma sayacı artmalı');
+  assert.equal(t.report().pruned, t.pruned);
+});
+
 test('sayılar tutuyorsa hiçbir şey yapılmaz', () => {
   const g = new Game(['Emosh']);
   g.setupPhase = false;

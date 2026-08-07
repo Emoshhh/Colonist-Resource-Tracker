@@ -33,7 +33,7 @@ function rows() {
 
 const ROWS = rows();
 const partsOf = (idx) => elementToParts(ROWS.get(idx));
-const PLAYERS = ['Emosh', 'TheBigLion', 'Thunder08'];
+const PLAYERS = ['Emosh', 'TheBigLion', 'Thunder08', 'Kavita', 'Munshi', 'Rhody0146'];
 const eventOf = (idx, ctx = {}) => parseMessage(partsOf(idx), { players: PLAYERS, ...ctx });
 
 const INFO_LINES = readFileSync(
@@ -46,7 +46,10 @@ const INFO_LINES = readFileSync(
 test('fixture beklenen satırları içeriyor', () => {
   assert.deepEqual(
     [...ROWS.keys()].sort((a, b) => a - b),
-    ['19', '92', '113', '114', '115', '116', '117', '118', '119', '120', '124', '126', '167', '221', '222', '229', '252', '315', '355', '361', '413', '446'],
+    // prettier-ignore
+    ['19', '33', '92', '113', '114', '115', '116', '117', '118', '119', '120', '124',
+     '126', '167', '221', '222', '229', '236', '237', '252', '315', '355', '361',
+     '413', '446', '472'],
   );
 });
 
@@ -117,6 +120,37 @@ test('kart atma satırı gerçek metniyle tanınır', () => {
   const big = eventOf('92');
   assert.equal(big.kind, 'lose');
   assert.deepEqual(big.res, { ore: 4, brick: 2, lumber: 1 });
+});
+
+// Oyuncular arası takas: "X gave <kartlar> and got <kartlar> from Y".
+// İçinde "got" geçtiği için kazanç satırı sanılma riski var; sıralama bunu önlüyor.
+test('oyuncular arası takas iki yönlü okunur', () => {
+  const ev = eventOf('472');
+  assert.equal(ev.kind, 'tradePlayer');
+  assert.equal(ev.from, 'Emosh');
+  assert.equal(ev.to, 'Kavita');
+  assert.deepEqual(ev.gave, { lumber: 1, ore: 2, grain: 2 });
+  assert.deepEqual(ev.took, { wool: 1 });
+});
+
+// Takas TEKLİFİ ("wants to give X for Y") kart hareketi değildir; kabul edilmemiş
+// olabilir. Kazanç sayılırsa sayım şişer.
+test('takas teklifi kart hareketi sayılmaz', () => {
+  assert.equal(eventOf('33').kind, 'ignore');
+});
+
+test('yıl bereketi: kart oynanır, sonra bankadan alınır', () => {
+  assert.deepEqual(eventOf('236'), {
+    kind: 'playDev',
+    player: 'Rhody0146',
+    card: 'yearofplenty',
+  });
+
+  const taken = eventOf('237');
+  assert.equal(taken.kind, 'gain');
+  assert.equal(taken.reason, 'yearOfPlenty');
+  assert.equal(taken.player, 'Rhody0146');
+  assert.deepEqual(taken.res, { ore: 2 });
 });
 
 test('şehir inşası tanınır', () => {

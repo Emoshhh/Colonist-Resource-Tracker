@@ -228,6 +228,9 @@ export class Overlay {
     }
     if (report.missed) problems.push(`${report.missed} satır okunamadı (sayım eksik olabilir)`);
     if (report.desyncs) problems.push(`${report.desyncs} log satırı hesapla çelişti`);
+    if (report.pruned) {
+      problems.push('olasılık ağacı kırpıldı — alt/üst sınırlar kesin değil');
+    }
     if (report.unknownCount) problems.push(`${report.unknownCount} satır tanınmadı`);
     this.warn.textContent = problems.length ? '⚠ ' + problems.join(' · ') : '';
     this.warn.style.display = problems.length ? '' : 'none';

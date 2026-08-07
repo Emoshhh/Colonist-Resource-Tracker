@@ -49,6 +49,7 @@ export class Tracker {
     this.desyncs = [];
     this.history = [];
     this.worldCap = 4000;
+    this.pruned = 0; // kaç kez dünya kırpması yapıldı (sınırlar bozulur)
     this.worlds.set(encode([]), 1);
     players.forEach((p) => this.addPlayer(p));
   }
@@ -112,6 +113,9 @@ export class Tracker {
 
     let worlds = next;
     if (worlds.size > this.worldCap) {
+      // Kırpma alt/üst sınırları BOZAR: elenen dünyalardan biri gerçek olabilir.
+      // Sessizce yapılmamalı; sayaç panelde uyarıya dönüşüyor.
+      this.pruned += 1;
       const kept = [...worlds.entries()].sort((a, b) => b[1] - a[1]).slice(0, this.worldCap);
       worlds = new Map(kept);
       total = kept.reduce((a, [, w]) => a + w, 0);
@@ -377,6 +381,7 @@ export class Tracker {
       players,
       worlds: this.worlds.size,
       desyncs: this.desyncs.length,
+      pruned: this.pruned,
     };
   }
 

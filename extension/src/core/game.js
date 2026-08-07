@@ -203,6 +203,7 @@ export class Game {
     rep.missed = this.missed;
     rep.unresolvedYou = this.unresolvedYou;
     rep.corrections = this.corrections.length;
+    rep.pruned = this.tracker.pruned;
     return rep;
   }
 }
