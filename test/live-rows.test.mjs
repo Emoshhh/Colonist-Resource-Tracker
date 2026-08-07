@@ -33,7 +33,8 @@ function rows() {
 
 const ROWS = rows();
 const partsOf = (idx) => elementToParts(ROWS.get(idx));
-const eventOf = (idx, ctx = {}) => parseMessage(partsOf(idx), { players: ['Emosh', 'TheBigLion'], ...ctx });
+const PLAYERS = ['Emosh', 'TheBigLion', 'Thunder08'];
+const eventOf = (idx, ctx = {}) => parseMessage(partsOf(idx), { players: PLAYERS, ...ctx });
 
 const INFO_LINES = readFileSync(
   fileURLToPath(new URL('./fixtures/live-info-lines.txt', import.meta.url)),
@@ -45,7 +46,7 @@ const INFO_LINES = readFileSync(
 test('fixture beklenen satırları içeriyor', () => {
   assert.deepEqual(
     [...ROWS.keys()].sort((a, b) => a - b),
-    ['19', '113', '114', '115', '116', '117', '118', '119', '120', '124', '126', '167', '221', '222', '229', '252', '315', '413', '446'],
+    ['19', '92', '113', '114', '115', '116', '117', '118', '119', '120', '124', '126', '167', '221', '222', '229', '252', '315', '355', '361', '413', '446'],
   );
 });
 
@@ -111,6 +112,25 @@ test('kart atma satırı gerçek metniyle tanınır', () => {
   assert.equal(mine.kind, 'lose');
   assert.equal(mine.player, 'Emosh');
   assert.deepEqual(mine.res, { lumber: 4, brick: 1 });
+
+  // 14 kartla yakalanınca 7 kart birden gidiyor.
+  const big = eventOf('92');
+  assert.equal(big.kind, 'lose');
+  assert.deepEqual(big.res, { ore: 4, brick: 2, lumber: 1 });
+});
+
+test('şehir inşası tanınır', () => {
+  const ev = eventOf('361');
+  assert.equal(ev.kind, 'build');
+  assert.equal(ev.item, 'city');
+  assert.equal(ev.player, 'Emosh');
+});
+
+// "generated_tile_ore" bir ARAZİ ikonu, taş KARTI değil. Bu satır bir kaynak
+// hareketi değil; ikon eşlemesi gevşetilirse burası ilk kırılan yer olur.
+test('bloke arazi satırındaki arazi ikonu kaynak sayılmaz', () => {
+  const ev = eventOf('355');
+  assert.equal(ev.kind, 'ignore');
 });
 
 test('şövalye / tekel / yol yapımı kartları tooltip içinden okunur', () => {

@@ -148,10 +148,16 @@ hemen doğru olur, türleri `?` olarak başlar ve oyun ilerledikçe yavaş yava�
 
 Panel "Oyun log'u bulunamadı" diyorsa ya da satırları tanımıyorsa, ham log'u görmek gerekir:
 
-**Yol 1 — panelden:** ⧉ düğmesi. Tanınmayan satırları, o an görünen satırları ve
-**arşivlenen nadir satırları** (kart atma, gelişim kartı, tekel, çalma) hem panoya
-kopyalar hem konsola basar. Nadir satırlar geçerken kaydedildiği için 7'nin geldiği
-anı yakalamak zorunda değilsin — oyun sonunda bir kez ⧉'ye basman yeter.
+**Yol 1 — panelden:** ⧉ düğmesi. Şunları hem panoya kopyalar hem konsola basar:
+
+1. **Durum özeti** — kendi adın hangi yoldan bulundu, sayaçlar (okunamayan satır,
+   çelişki, panel düzeltmesi), oyun panelindeki sayılar ile hesabın yan yana (`✓` / `✗`),
+   ve her oyuncunun hesaplanan eli.
+2. Tanınmayan satırlar.
+3. O an görünen ham satırlar.
+4. **Arşivlenen nadir satırlar** (kart atma, gelişim kartı, tekel, çalma) — geçerken
+   kaydedildikleri için 7'nin geldiği anı yakalamak zorunda değilsin; oyun sonunda
+   bir kez ⧉'ye basman yeter.
 
 **Yol 2 — konsoldan (eklenti çalışmasa da olur):** oyundayken `F12` → **Console** sekmesi
 (Sources değil), `tools/dump-log.js` dosyasının içeriğini yapıştır, Enter. Sonra `copy(__ctDump)`

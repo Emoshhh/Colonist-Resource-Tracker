@@ -97,6 +97,52 @@ function meIsAmbiguous() {
   return [...humanPlayers].filter((n) => !botPlayers.has(n)).length > 1;
 }
 
+/** Kendi adımızı hangi yoldan bulduk? Döküme yazılır, teşhis için önemli. */
+function meSource() {
+  if (manualMe && game.players.includes(manualMe)) return 'elle seçildi';
+  if (panelRows.some((r) => r.isMe)) return 'oyun paneli (currentUser)';
+  const candidates = [...humanPlayers].filter((n) => !botPlayers.has(n));
+  if (candidates.length === 1) return 'avatar (tek insan oyuncu)';
+  return 'profil adı / bulunamadı';
+}
+
+/**
+ * Dökümün başına durum özeti. Ham log tek başına "satır tanındı mı"yı
+ * gösteriyor ama "sayım tuttu mu, ben kimim, kaç düzeltme yapıldı"yı
+ * göstermiyordu — teşhis için asıl gereken bunlar.
+ */
+function debugSummary() {
+  const rep = game.report();
+  const lines = [
+    '--- durum ---',
+    `ben: ${me || '(çözülemedi)'}  [${meSource()}]`,
+    `oyuncular: ${game.players.join(', ') || '(yok)'}`,
+    `zar: ${rep.rollCount} · dünya: ${rep.worlds} · kurulum: ${rep.setupPhase ? 'evet' : 'hayır'}`,
+    `okunamayan satır: ${rep.missed} · çelişki: ${rep.desyncs} · ` +
+      `işlenemeyen "sen": ${rep.unresolvedYou} · panel düzeltmesi: ${rep.corrections}`,
+    '',
+    '--- oyun paneli (bağımsız kaynak) ---',
+  ];
+
+  if (!panelRows.length) lines.push('(panel okunamadı)');
+  for (const row of panelRows) {
+    const mine = rep.players.find((p) => p.name === row.name);
+    const cmp = mine
+      ? `hesap ${mine.totalMax}/${mine.devCards}${
+          mine.totalMax === row.cards && mine.devCards === row.devCards ? ' ✓' : ' ✗ UYUŞMUYOR'
+        }`
+      : 'hesapta yok';
+    lines.push(`${row.name}${row.isMe ? ' (ben)' : ''}: panel ${row.cards}/${row.devCards} · ${cmp}`);
+  }
+
+  lines.push('', '--- hesaplanan eller (kesin alt sınır + bilinmeyen) ---');
+  for (const p of rep.players) {
+    const cells = p.res.map((c) => `${c.res[0].toUpperCase()}${c.min}${c.certain ? '' : '+'}`).join(' ');
+    lines.push(`${p.name}: ${cells} · ? ${p.unknown} · toplam ${p.totalMax} · GK ${p.devCards}`);
+  }
+  return lines.join('\n');
+}
+
 const overlay = new Overlay({
   onReset: () => {
     game = new Game();
@@ -121,6 +167,8 @@ const overlay = new Overlay({
   },
   onCopyDebug: () => {
     const payload = [
+      debugSummary(),
+      '',
       `--- tanınmayan satırlar (${game.unknownMessages.length}) ---`,
       ...game.unknownMessages,
       '',
