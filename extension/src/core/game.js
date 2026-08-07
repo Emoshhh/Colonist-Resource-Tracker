@@ -18,6 +18,56 @@ export class Game {
     this.missed = 0;
     this.unresolvedYou = 0;
     this.lastEvent = null;
+    this.corrections = [];
+  }
+
+  /**
+   * Oyunun kendi oyuncu paneliyle sayımı eşitle.
+   *
+   * Panel kart TÜRÜNÜ söylemez ama SAYIYI kesin söyler. Log'da bir satır
+   * kaçtıysa (ya da metni tanınmadıysa) fark buradan görülür ve kapatılır:
+   *   panelde az  -> o kadar kart türü bilinmeden çıkarılır (7'de atma, kaçan harcama)
+   *   panelde çok -> o kadar kart türü bilinmeden eklenir  (kaçan kazanç)
+   * Eklenen/çıkarılan kartların türü dallandırıldığı için sonraki hamleler
+   * bunları yine kendiliğinden çözer.
+   *
+   * rows: [{ name, cards, devCards }]  (dom/player-panel.js çıktısı)
+   * Dönüş: uygulanan düzeltmeler.
+   */
+  syncWithPanel(rows, { maxDiff = 12 } = {}) {
+    const applied = [];
+    if (!Array.isArray(rows) || !rows.length) return applied;
+
+    const totals = new Map();
+    for (const p of this.tracker.report().players) totals.set(p.name, p.totalMax);
+
+    for (const row of rows) {
+      if (!row || !this.tracker.hasPlayer(row.name)) continue;
+
+      if (typeof row.devCards === 'number' && row.devCards >= 0) {
+        const mine = this.tracker.devCards.get(row.name) || 0;
+        if (mine !== row.devCards) {
+          this.tracker.setDevCards(row.name, row.devCards);
+          applied.push({ player: row.name, kind: 'dev', from: mine, to: row.devCards });
+        }
+      }
+
+      if (typeof row.cards !== 'number' || row.cards < 0) continue;
+      const mine = totals.get(row.name);
+      if (typeof mine !== 'number') continue;
+      const diff = row.cards - mine;
+      if (!diff || Math.abs(diff) > maxDiff) continue;
+
+      if (diff < 0) this.tracker.loseUnknown(row.name, -diff);
+      else this.tracker.gainUnknown(row.name, diff);
+      applied.push({ player: row.name, kind: 'cards', from: mine, to: row.cards });
+    }
+
+    if (applied.length) {
+      this.corrections.push(...applied);
+      if (this.corrections.length > 50) this.corrections.splice(0, this.corrections.length - 50);
+    }
+    return applied;
   }
 
   /**
@@ -152,6 +202,7 @@ export class Game {
     rep.unknownCount = this.unknownMessages.length;
     rep.missed = this.missed;
     rep.unresolvedYou = this.unresolvedYou;
+    rep.corrections = this.corrections.length;
     return rep;
   }
 }

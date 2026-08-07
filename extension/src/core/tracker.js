@@ -149,6 +149,69 @@ export class Tracker {
     });
   }
 
+  /**
+   * Türü görünmeyen kayıp: oyuncu n kart kaybetti ama hangileri yazmıyor.
+   * (7'de kart atma satırı okunamadığında oyunun kendi paneli "kaç kart
+   * gitti"yi kesin söyler; "hangileri"ni elin bileşimine göre dallandırırız.)
+   */
+  loseUnknown(player, n) {
+    if (!(n > 0)) return true;
+    const p = this.idx(player);
+    this.history.push({ op: 'loseUnknown', player, n });
+    return this._apply(`${player} -${n}?`, (hands, w) => {
+      let cur = [[hands, w]];
+      for (let step = 0; step < n; step++) {
+        const next = [];
+        for (const [hs, ww] of cur) {
+          const total = vectorSum(hs[p]);
+          if (total === 0) continue; // o kadar kart yoktu -> dünya imkânsız
+          for (let i = 0; i < R; i++) {
+            const c = hs[p][i];
+            if (!c) continue;
+            const h = cloneHands(hs);
+            h[p][i] -= 1;
+            next.push([h, (ww * c) / total]);
+          }
+        }
+        cur = next;
+        if (!cur.length) return [];
+      }
+      return cur;
+    });
+  }
+
+  /**
+   * Türü görünmeyen kazanç: oyuncunun eline n kart girdi ama hangileri
+   * bilinmiyor. Her kaynak eşit olasılıkla dallanır; hiçbir kaynağın alt
+   * sınırı artmaz, yani bu kartlar panelde "?" sütununda görünür.
+   */
+  gainUnknown(player, n) {
+    if (!(n > 0)) return true;
+    const p = this.idx(player);
+    this.history.push({ op: 'gainUnknown', player, n });
+    return this._apply(`${player} +${n}?`, (hands, w) => {
+      let cur = [[hands, w]];
+      for (let step = 0; step < n; step++) {
+        const next = [];
+        for (const [hs, ww] of cur) {
+          for (let i = 0; i < R; i++) {
+            const h = cloneHands(hs);
+            h[p][i] += 1;
+            next.push([h, ww / R]);
+          }
+        }
+        cur = next;
+      }
+      return cur;
+    });
+  }
+
+  /** Gelişim kartı sayısını dışarıdan (oyun panelinden) kesinle. */
+  setDevCards(player, n) {
+    this.idx(player);
+    this.devCards.set(player, Math.max(0, n));
+  }
+
   /** İki oyuncu arasında içeriği bilinen takas. */
   transfer(from, to, vec) {
     const a = this.idx(from);

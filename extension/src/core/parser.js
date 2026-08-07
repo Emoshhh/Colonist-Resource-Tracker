@@ -19,7 +19,7 @@ export const SNIPPETS = {
   setupDone: ['giving out starting resources'],
   startingResources: ['received starting resources'],
   got: ['got'],
-  discarded: ['discarded'],
+  discarded: ['discarded', 'discards'],
   yearOfPlenty: ['took from bank'],
   bankGave: ['gave bank'],
   bankTook: ['and took'],

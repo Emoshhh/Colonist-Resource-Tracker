@@ -220,6 +220,9 @@ export class Overlay {
     if (this.mismatches) {
       problems.push(`${this.mismatches} sayı oyun paneliyle uyuşmuyor`);
     }
+    if (report.corrections) {
+      problems.push(`${report.corrections} sayı oyun panelinden düzeltildi`);
+    }
     if (report.unresolvedYou) {
       problems.push(`${report.unresolvedYou} "sen" satırı işlenemedi — kendi adına tıkla`);
     }

@@ -29,6 +29,21 @@ test('kart atma', () => {
   assert.deepEqual(ev.res, { wool: 1, brick: 1 });
 });
 
+// Kart atma satırının güncel colonist'teki tam metni henüz canlı görülmedi;
+// iki nokta olan/olmayan ve tekil/çoğul yazımların hepsi tanınmalı.
+test('kart atma: iki noktasız ve "discards" yazımı', () => {
+  for (const verb of ['discarded', 'discards']) {
+    const ev = parseMessage([P('Veli'), T(verb), I('card_wool')], ctx);
+    assert.equal(ev.kind, 'lose', verb);
+    assert.deepEqual(ev.res, { wool: 1 }, verb);
+  }
+});
+
+test('"kart seçiyor" duyurusu kart atma sanılmaz', () => {
+  const ev = parseMessage([T('Bot is selecting cards to discard for Cuda')], ctx);
+  assert.equal(ev.kind, 'ignore');
+});
+
 test('banka takası', () => {
   const ev = parseMessage(
     [

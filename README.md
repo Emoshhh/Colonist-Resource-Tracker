@@ -1,8 +1,9 @@
 # Colonist Kaynak Takibi
 
 [colonist.io](https://colonist.io) oyununda **rakiplerin elindeki kaynakları canlı takip eden** bir tarayıcı eklentisi.
-Oyun ekranındaki genel oyun log'unu okur, zar dağıtımlarını ve hamleleri işleyerek her oyuncunun elini hesaplar
-ve ekranın köşesinde sürüklenebilir bir panelde gösterir.
+Oyun ekranındaki genel log'u okur, zar dağıtımlarını ve hamleleri işleyerek her oyuncunun elini hesaplar
+ve ekranın köşesinde sürüklenebilir bir panelde gösterir. Sayımı oyunun kendi oyuncu paneliyle
+sürekli karşılaştırır, böylece kaçan bir log satırı sessizce yanlış sayıya dönüşmez.
 
 ```
 ┌────────────────────────────────────┐
@@ -43,23 +44,46 @@ toplamı olan `?` sütunu. Hücrenin üstüne gelince üst sınır ve olasılık
 
 Toplam kart sayısı (Σ) her zaman kesindir — çalma toplamı değiştirmez, sadece yerini değiştirir.
 
-## Oyunun kendi paneliyle çapraz doğrulama
+## İki kaynak: log + oyunun kendi paneli
 
-Log tek kaynak değil: colonist sol üstteki oyuncu panelinde herkesin **toplam kart** ve
-**gelişim kartı** sayısını zaten yazıyor. Eklenti bu sayıları da okur
-(`data-resource-card` / `data-development-card` rozetleri) ve kendi hesabıyla karşılaştırır.
+Log tek kaynak değil. Colonist'in oyuncu panelinde herkesin **toplam kart** ve
+**gelişim kartı** sayısı zaten yazıyor. Eklenti bu rozetleri de okuyor
+(`data-resource-card` / `data-development-card`) ve kendi hesabıyla karşılaştırıyor.
 
-- Sayılar tutuyorsa hiçbir şey görünmez — sessiz doğrulama.
-- Tutmuyorsa o hücre `7≠5` gibi kırmızı yazılır ve üstte
-  `⚠ N sayı oyun paneliyle uyuşmuyor` uyarısı çıkar. Yani bir log satırı kaçtıysa
-  bunu tahmin etmen gerekmez, panel anında söyler.
+İkisi birbirinin eksiğini kapatıyor:
 
-Panel neden tek başına yetmez: yalnızca **kaç** kart olduğunu söyler, **hangi** kartlar
-olduğunu söylemez. Kart türlerini yalnızca log'dan çıkarabiliyoruz. İkisi birlikte
-kullanıldığında biri türü, diğeri toplamı garanti eder.
+| | Log | Oyun paneli |
+|---|---|---|
+| Kartın **türü** (odun mu taş mı) | ✅ yazıyor | ❌ hiç söylemez |
+| Kartın **sayısı** | hesapla çıkarılır | ✅ doğrudan yazıyor |
+| Kim "sen"sin | tahmin gerekir | ✅ `currentUser` |
 
-Aynı panel "sen kimsin" sorusunu da kesin çözer: kendi satırında `currentUser` sınıfı
-bulunur, dolayısıyla botsuz/çok insanlı oyunlarda bile ad tahmin edilmez.
+Sayılar tutuyorsa hiçbir şey görünmez — sessiz doğrulama. Tutmuyorsa fark
+**kapatılır** (aşağıya bak) ve panelde `⚠ N sayı oyun panelinden düzeltildi` yazar.
+
+## 7 geldiğinde ne oluyor
+
+Biri 8+ kartla 7'ye yakalanınca yarısını atar. Bu satır iki yoldan işlenir:
+
+1. **Log satırı okunursa** (`Cuda discarded 🌲🌾`) atılan kartlar tam olarak düşülür —
+   en iyi durum, tür bilgisi de korunur.
+2. **Okunamazsa** (metin değişmiş, satır kaçmış, ya da hiç yazılmamışsa) panel devreye
+   girer: oyun "Cuda'nın 4 kartı var" diyorsa ve bizim hesapta 8 varsa, **4 kart türü
+   bilinmeden çıkarılır**. Hangi 4'ü gittiği elin bileşimine göre dallandırılır — yani
+   `?` sütununa yazılır, uydurulmaz.
+
+Sonrasında oyun devam ettikçe belirsizlik yine kendiliğinden çözülür: Cuda 3 taşı bankaya
+verdiyse, attığı kartların taş olmadığı ortaya çıkar ve `?` erir.
+
+Aynı mekanizma ters yönde de çalışır — panelde bizden **fazla** kart varsa (kaçan bir
+kazanç satırı) o kadar kart türü bilinmeden eklenir. Böylece Σ sütunu her zaman
+oyunun kendi sayısına eşit kalır; hata sadece "hangi kart" tarafında birikir, "kaç kart"
+tarafında değil.
+
+**Yanlış düzeltmeye karşı:** panel ile log birbirine göre birkaç yüz ms gecikebiliyor.
+Bu yüzden anlık farka bakılmaz; aynı sayılar üst üste 3 kez (~2,7 sn) görülmeli ve o
+sırada yeni bir log satırı işlenmemiş olmalı. Fark bu kadar sürerken kapanmıyorsa
+gerçekten bir şey kaçmış demektir.
 
 ## Kurulum
 
@@ -95,15 +119,30 @@ senin oyundaki adını bilmesi gerekir.
 
 Başlık çubuğundan sürükleyerek taşıyabilirsin; konum ve durum `localStorage`'da saklanır.
 
-## Önemli: oyunu baştan izlemesi gerekir
+## Panel uyarıları ne demek
+
+| Uyarı | Anlamı |
+|-------|--------|
+| `N sayı oyun panelinden düzeltildi` | Log'da bir şey kaçtı, fark panelden kapatıldı. Toplamlar doğru; o kartların türü `?` sütununda. |
+| `N sayı oyun paneliyle uyuşmuyor` | Fark henüz taze; birkaç saniye içinde ya kendiliğinden kapanır ya da düzeltilir. |
+| `N satır okunamadı` | Sanal kaydırıcı yüzünden satır kaçtı (aşağıya bak). |
+| `N log satırı hesapla çelişti` | Bir hamle mevcut duruma göre imkânsızdı. Motor durumu bozmaz, son geçerli hâlini korur. |
+| `N satır tanınmadı` | Metin kalıbı eşleşmedi — ⧉ ile döküm al. |
+| `N "sen" satırı işlenemedi` | Kendi adın çözülemedi; panelde adına tıkla. |
+
+## Oyunu baştan izlemek
 
 Colonist'in log'u bir **sanal kaydırıcıdır** — o an ekranda görünen ~8 satır DOM'da durur,
-yukarı kayanlar tamamen silinir. Yani eklenti geçmişi geriye dönük okuyamaz.
+yukarı kayanlar tamamen silinir. Yani eklenti log geçmişini geriye dönük okuyamaz.
 
-- Eklentiyi **oyun başlamadan önce** açık tut (sekme açıkken masaya otur).
+- Eklentiyi **oyun başlamadan önce** açık tut (sekme açıkken masaya otur) — kart türlerini
+  ancak böyle baştan sona takip edebilir.
 - Oynarken log'u yukarı kaydırıp öyle bırakma; yeni satırlar DOM'a hiç girmez.
 - Bir şey kaçarsa panel `⚠ N satır okunamadı` der. Satırlar `data-index` sırasıyla
   takip edildiği için kaçan satır sayısı kesin bilinir; sessizce yanlış sayı göstermez.
+
+Oyunun ortasında açarsan çökmez: panel eşitlemesi sayesinde herkesin **toplam** kartı
+hemen doğru olur, türleri `?` olarak başlar ve oyun ilerledikçe yavaş yavaş çözülür.
 
 ## Gerçek log'a nasıl bakılır
 
@@ -128,9 +167,9 @@ Log kutusu ise önce bilinen seçicilerle (`LOG_SELECTORS`), bulunamazsa **içer
 aranır: "rolled / got / placed a / gave ..." gibi satırları en çok barındıran en dar eleman
 seçilir. Yani colonist id ve class isimlerini değiştirse bile panel çalışmaya devam eder.
 
-`⚠ N log satırı hesapla çelişti` uyarısı ise bir hamlenin mevcut duruma göre imkânsız olduğunu
-söyler (genelde tanınmayan bir satır yüzünden). Bu durumda motor durumu bozmaz, son geçerli
-hâlini korur; ⟲ ile baştan okutabilirsin.
+Metin değişikliği artık sayımı bozmuyor: tanınmayan satır kart hareketi içeriyorsa fark
+oyunun kendi panelinden kapanır, sadece o kartların türü belirsiz kalır. Yine de kalıbı
+eklemek daha iyidir — tür bilgisi geri gelir.
 
 ## Proje yapısı
 
@@ -145,7 +184,7 @@ extension/
       resources.js        kaynaklar, maliyetler, ikon eşlemeleri
       parser.js           log satırı -> olay  (saf fonksiyon)
       tracker.js          olasılıklı el takibi (saf fonksiyon)
-      game.js             olay -> durum uygulaması, zar istatistiği
+      game.js             olay -> durum uygulaması, panel eşitleme, zar istatistiği
     dom/
       log-reader.js       colonist DOM'u -> parser girdisi
       player-panel.js     oyunun kendi oyuncu paneli -> doğrulama sayıları

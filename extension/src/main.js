@@ -28,6 +28,18 @@ const humanPlayers = new Set();
 /** Oyunun kendi oyuncu panelinden okunan satırlar (bağımsız doğrulama kaynağı). */
 let panelRows = [];
 
+/**
+ * Panelle eşitleme, sayılar OTURDUKTAN sonra yapılır: panel ile log birbirine
+ * göre birkaç yüz ms gecikebilir, anlık farka bakıp düzeltmek durumu bozardı.
+ * Bu yüzden aynı sayılar üst üste birkaç kez görülmeli ve o sırada yeni bir
+ * log satırı işlenmemiş olmalı.
+ */
+const SYNC_TICK_MS = 900;
+const SYNC_STABLE = 3;
+let msgSeq = 0;
+let syncSig = '';
+let syncHits = 0;
+
 function refreshPanel() {
   try {
     panelRows = readPlayerPanel();
@@ -90,6 +102,8 @@ const overlay = new Overlay({
     game = new Game();
     botPlayers.clear();
     humanPlayers.clear();
+    syncSig = '';
+    syncHits = 0;
     watcher.rescan();
     scheduleRender();
   },
@@ -132,7 +146,36 @@ function scheduleRender() {
   });
 }
 
+function panelSignature(rows) {
+  return rows.map((r) => `${r.name}:${r.cards}:${r.devCards}`).join('|') + `#${msgSeq}`;
+}
+
+function panelSyncTick() {
+  const rows = refreshPanel();
+  if (!rows.length) {
+    syncSig = '';
+    syncHits = 0;
+    return;
+  }
+  const sig = panelSignature(rows);
+  if (sig !== syncSig) {
+    syncSig = sig;
+    syncHits = 1;
+    return;
+  }
+  if (syncHits >= SYNC_STABLE) return; // bu imza için zaten eşitlendi
+  syncHits += 1;
+  if (syncHits < SYNC_STABLE) return;
+
+  const fixes = game.syncWithPanel(rows);
+  if (fixes.length) {
+    console.log('[colonist-tracker] sayım oyun panelinden düzeltildi', fixes);
+    scheduleRender();
+  }
+}
+
 function handleMessage(parts) {
+  msgSeq += 1;
   // Mesajda geçen oyuncuları kaydet (sıra = log'da görülme sırası)
   for (const name of playersIn(parts, game.players)) {
     if (name && !/^you$/i.test(name)) game.addPlayer(name);
@@ -160,6 +203,8 @@ const watcher = new LogWatcher({
     game = new Game();
     botPlayers.clear();
     humanPlayers.clear();
+    syncSig = '';
+    syncHits = 0;
     me = resolveMe();
     overlay.setMe(me, meIsAmbiguous());
     scheduleRender();
@@ -173,6 +218,7 @@ function boot() {
   me = resolveMe();
   overlay.setMe(me, meIsAmbiguous());
   watcher.start();
+  setInterval(panelSyncTick, SYNC_TICK_MS);
   scheduleRender();
   console.log('[colonist-tracker] hazır');
 }
