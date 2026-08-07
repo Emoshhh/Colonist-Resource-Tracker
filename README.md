@@ -199,13 +199,31 @@ extension/
 test/                     node:test ile birim + uçtan uca testler
   fixtures/               canlı oyundan kopyalanmış gerçek HTML
   helpers/html.mjs        testler için minik HTML ayrıştırıcı
+tools/
+  check-extension.mjs     manifest / sözdizimi / import yolu denetimi
+  dump-log.js             eklentisiz çalışan konsol döküm betiği
+.github/workflows/        her push'ta test + denetim
 ```
 
-Çekirdek (`core/`) tamamen DOM'dan bağımsızdır, bu yüzden doğrudan Node ile test edilir:
+Çekirdek (`core/`) tamamen DOM'dan bağımsızdır, bu yüzden doğrudan Node ile test edilir.
+Bağımlılık yok; `node:test` yeterli.
 
 ```bash
-npm test
+npm test     # 115 test: çekirdek mantık + gerçek log satırları
+npm run check   # eklenti bütünlüğü (aşağıya bak)
 ```
+
+`npm run check`, testlerin ulaşamadığı yeri kapatır: `main.js` ve `ui/overlay.js`
+DOM'a bağlı olduğu için hiçbir test onları yüklemiyor, dolayısıyla oradaki bir
+yazım hatası ya da yanlış import yolu ancak tarayıcıda açınca fark edilirdi.
+Denetim üç şeye bakar:
+
+1. `manifest.json` geçerli mi, andığı dosyalar gerçekten var mı
+2. her `.js` sözdizimsel olarak geçerli mi (modül olarak ayrıştırılır)
+3. her göreli `import` gerçek bir dosyaya çıkıyor mu
+
+İkisi de her push'ta GitHub Actions üzerinde koşar (`.github/workflows/test.yml`,
+Node 20 ve 22).
 
 ## Notlar
 
