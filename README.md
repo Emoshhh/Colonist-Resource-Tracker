@@ -113,6 +113,7 @@ senin oyundaki adını bilmesi gerekir.
 |-------|-------|
 | % | Olasılıklı görünüm: kesin sayı yerine beklenen değer + aralık |
 | 🎲 | Zar istatistiği grafiğini aç/kapat |
+| ⤢ | Panel boyutu: küçük → normal → büyük (seçim saklanır) |
 | ⟲ | Sayacı sıfırla ve log'u baştan oku |
 | ⧉ | Tanınmayan log satırlarını + ham log'u panoya kopyala |
 | – | Paneli küçült |

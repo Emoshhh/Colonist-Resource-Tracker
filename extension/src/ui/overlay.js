@@ -6,6 +6,9 @@ import { RESOURCES, RES_LABEL, RES_COLOR, DEFAULT_CARD_ICONS } from '../core/res
 
 const STORAGE_KEY = 'colonist-tracker-ui';
 
+const SIZES = ['s', 'm', 'l'];
+const SIZE_LABEL = { s: 'küçük', m: 'normal', l: 'büyük' };
+
 function el(tag, cls, text) {
   const node = document.createElement(tag);
   if (cls) node.className = cls;
@@ -37,6 +40,7 @@ export class Overlay {
     this.ui = loadUiState();
     this.showRolls = this.ui.showRolls ?? true;
     this.showProbabilities = this.ui.showProbabilities ?? false;
+    this.size = SIZES.includes(this.ui.size) ? this.ui.size : 'm';
     this.root = null;
     this.me = null;
     this.icons = {};
@@ -101,11 +105,15 @@ export class Overlay {
     const debugBtn = el('button', 'ct-btn', '⧉');
     debugBtn.title = 'Tanınmayan log satırlarını panoya kopyala';
     debugBtn.onclick = () => this.onCopyDebug();
+    const sizeBtn = el('button', 'ct-btn', '⤢');
+    sizeBtn.onclick = () => this.cycleSize();
+    this.sizeBtn = sizeBtn;
+
     const minBtn = el('button', 'ct-btn', '–');
     minBtn.title = 'Küçült';
     minBtn.onclick = () => this.toggleCollapse();
 
-    actions.append(probBtn, rollsBtn, resetBtn, debugBtn, minBtn);
+    actions.append(probBtn, rollsBtn, sizeBtn, resetBtn, debugBtn, minBtn);
     header.append(title, actions);
 
     // --- gövde
@@ -136,9 +144,35 @@ export class Overlay {
       root.style.top = this.ui.top + 'px';
       root.style.right = 'auto';
     }
+    this._applySize();
     if (this.ui.collapsed) this.toggleCollapse(true);
 
     this._makeDraggable(header);
+  }
+
+  /** Panel boyutu: küçük / normal / büyük. Ölçüler CSS'te --ct-scale ile türetilir. */
+  cycleSize() {
+    this.size = SIZES[(SIZES.indexOf(this.size) + 1) % SIZES.length];
+    this.ui.size = this.size;
+    saveUiState(this.ui);
+    this._applySize();
+    if (this.lastReport) this.render(this.lastReport); // çubuk yükseklikleri JS'ten
+  }
+
+  /** Geçerli ölçek katsayısı (CSS'teki --ct-scale). */
+  _scale() {
+    if (!this.root || typeof getComputedStyle !== 'function') return 1;
+    const raw = getComputedStyle(this.root).getPropertyValue('--ct-scale');
+    const n = parseFloat(raw);
+    return Number.isFinite(n) && n > 0 ? n : 1;
+  }
+
+  _applySize() {
+    if (!this.root) return;
+    for (const s of SIZES) this.root.classList.toggle(`ct-size-${s}`, s === this.size);
+    if (this.sizeBtn) {
+      this.sizeBtn.title = `Panel boyutu: ${SIZE_LABEL[this.size]} (tıkla: sıradaki)`;
+    }
   }
 
   toggleCollapse(force) {
@@ -404,12 +438,15 @@ export class Overlay {
       return;
     }
     const max = Math.max(...report.rolls.slice(2, 13));
+    // Çubuk yüksekliği JS'ten geliyor; panel ölçeğiyle birlikte büyümesi için
+    // CSS değişkeni okunur (kutu yüksekliği de aynı katsayıyla ölçekleniyor).
+    const scale = this._scale();
     const bars = el('div', 'ct-bars');
     for (let n = 2; n <= 12; n++) {
       const count = report.rolls[n];
       const col = el('div', 'ct-bar-col');
       const bar = el('div', 'ct-bar');
-      bar.style.height = `${max ? (count / max) * 34 : 0}px`;
+      bar.style.height = `${max ? (count / max) * 34 * scale : 0}px`;
       bar.title = `${n}: ${count} kez`;
       col.append(bar, el('div', 'ct-bar-label', String(n)));
       bars.appendChild(col);

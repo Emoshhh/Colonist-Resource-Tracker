@@ -1,11 +1,17 @@
+/*
+ * Bütün ölçüler --ct-scale ile çarpılır, böylece panel tek değişkenle
+ * büyüyüp küçülür. Varsayılan "normal"; başlıktaki ⤢ düğmesi küçük/normal/
+ * büyük arasında geçiş yapar ve seçim localStorage'da saklanır.
+ */
 #colonist-tracker.ct-root {
+  --ct-scale: 1.1;
   position: fixed;
   top: 90px;
   right: 16px;
   z-index: 2147483000;
-  width: 348px;
+  width: calc(348px * var(--ct-scale));
   font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: 12px;
+  font-size: calc(12px * var(--ct-scale));
   color: #e8ecf1;
   background: rgba(20, 26, 34, 0.94);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -15,11 +21,21 @@
   backdrop-filter: blur(3px);
 }
 
+#colonist-tracker.ct-size-s {
+  --ct-scale: 0.9;
+}
+#colonist-tracker.ct-size-m {
+  --ct-scale: 1.1;
+}
+#colonist-tracker.ct-size-l {
+  --ct-scale: 1.35;
+}
+
 #colonist-tracker .ct-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 7px 10px;
+  padding: calc(7px * var(--ct-scale)) calc(10px * var(--ct-scale));
   cursor: move;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -27,34 +43,35 @@
 #colonist-tracker .ct-title {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: calc(7px * var(--ct-scale));
   font-weight: 600;
   letter-spacing: 0.2px;
 }
 
 #colonist-tracker .ct-status {
-  width: 8px;
-  height: 8px;
+  width: calc(8px * var(--ct-scale));
+  height: calc(8px * var(--ct-scale));
   border-radius: 50%;
   background: #ffb020;
   display: inline-block;
+  flex: none;
 }
 
 #colonist-tracker .ct-actions {
   display: flex;
-  gap: 4px;
+  gap: calc(4px * var(--ct-scale));
 }
 
 #colonist-tracker .ct-btn {
   all: unset;
   cursor: pointer;
-  width: 20px;
-  height: 20px;
-  line-height: 20px;
+  width: calc(20px * var(--ct-scale));
+  height: calc(20px * var(--ct-scale));
+  line-height: calc(20px * var(--ct-scale));
   text-align: center;
   border-radius: 4px;
   color: #b9c3d0;
-  font-size: 12px;
+  font-size: calc(12px * var(--ct-scale));
 }
 
 #colonist-tracker .ct-btn:hover {
@@ -63,7 +80,7 @@
 }
 
 #colonist-tracker .ct-body {
-  padding: 8px;
+  padding: calc(8px * var(--ct-scale));
 }
 
 #colonist-tracker.ct-collapsed .ct-body {
@@ -79,22 +96,27 @@
 #colonist-tracker .ct-th,
 #colonist-tracker .ct-td {
   text-align: center;
-  padding: 3px 0;
+  padding: calc(3px * var(--ct-scale)) 0;
   font-variant-numeric: tabular-nums;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/*
+ * table-layout: fixed'te sütun genişliklerini İLK satır belirler; o da başlık
+ * satırı. Bu yüzden genişlik yalnız .ct-name'e verilirse işe yaramaz ve
+ * oyuncu adları kesilir. Kural her satırın ilk hücresine uygulanır.
+ */
+#colonist-tracker .ct-table tr > *:first-child {
+  width: calc(96px * var(--ct-scale));
+  max-width: calc(96px * var(--ct-scale));
+}
+
 #colonist-tracker .ct-name {
   text-align: left;
-  width: 76px;
-  max-width: 76px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   padding-left: 2px;
-}
-
-#colonist-tracker .ct-name {
   cursor: pointer;
 }
 
@@ -110,7 +132,7 @@
 
 #colonist-tracker .ct-icon {
   display: block;
-  height: 20px;
+  height: calc(20px * var(--ct-scale));
   width: auto;
   margin: 0 auto;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
@@ -118,18 +140,18 @@
 
 #colonist-tracker .ct-chip {
   display: inline-block;
-  width: 16px;
-  height: 16px;
-  line-height: 16px;
+  width: calc(16px * var(--ct-scale));
+  height: calc(16px * var(--ct-scale));
+  line-height: calc(16px * var(--ct-scale));
   border-radius: 4px;
   color: #10151c;
   font-weight: 700;
-  font-size: 10px;
+  font-size: calc(10px * var(--ct-scale));
 }
 
 #colonist-tracker .ct-td {
   position: relative;
-  font-size: 13px;
+  font-size: calc(13px * var(--ct-scale));
 }
 
 #colonist-tracker .ct-zero {
@@ -158,7 +180,7 @@
   font-weight: 700;
   background: rgba(255, 90, 70, 0.18);
   border-radius: 4px;
-  font-size: 11px;
+  font-size: calc(11px * var(--ct-scale));
 }
 
 #colonist-tracker .ct-unknown.ct-zero {
@@ -173,8 +195,8 @@
 
 #colonist-tracker .ct-range {
   display: block;
-  font-size: 8px;
-  line-height: 8px;
+  font-size: calc(8px * var(--ct-scale));
+  line-height: calc(8px * var(--ct-scale));
   color: #c9a15a;
 }
 
@@ -187,32 +209,32 @@
 }
 
 #colonist-tracker .ct-empty {
-  padding: 10px 4px;
+  padding: calc(10px * var(--ct-scale)) calc(4px * var(--ct-scale));
   color: #8e9aa8;
-  font-size: 11px;
+  font-size: calc(11px * var(--ct-scale));
   line-height: 1.4;
 }
 
 #colonist-tracker .ct-warn {
-  margin-top: 6px;
-  padding: 4px 6px;
+  margin-top: calc(6px * var(--ct-scale));
+  padding: calc(4px * var(--ct-scale)) calc(6px * var(--ct-scale));
   border-radius: 5px;
   background: rgba(255, 92, 92, 0.16);
   color: #ffb3b3;
-  font-size: 10px;
+  font-size: calc(10px * var(--ct-scale));
 }
 
 #colonist-tracker .ct-rolls {
-  margin-top: 8px;
+  margin-top: calc(8px * var(--ct-scale));
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 6px;
+  padding-top: calc(6px * var(--ct-scale));
 }
 
 #colonist-tracker .ct-bars {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  height: 46px;
+  height: calc(46px * var(--ct-scale));
   gap: 2px;
 }
 
@@ -232,14 +254,14 @@
 }
 
 #colonist-tracker .ct-bar-label {
-  font-size: 8px;
+  font-size: calc(8px * var(--ct-scale));
   color: #8e9aa8;
   margin-top: 2px;
 }
 
 #colonist-tracker .ct-rolls-empty,
 #colonist-tracker .ct-rolls-meta {
-  font-size: 10px;
+  font-size: calc(10px * var(--ct-scale));
   color: #8e9aa8;
   text-align: center;
 }
@@ -250,8 +272,8 @@
 }
 
 #colonist-tracker .ct-footer {
-  margin-top: 6px;
-  font-size: 10px;
+  margin-top: calc(6px * var(--ct-scale));
+  font-size: calc(10px * var(--ct-scale));
   color: #8e9aa8;
   text-align: right;
 }
