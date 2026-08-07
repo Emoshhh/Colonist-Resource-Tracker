@@ -35,6 +35,23 @@ const LOG_LINE_RE =
 const ARCHIVE_RE = /\b(discarded|used|bought|stole|monopoly|took from bank|development card)\b/i;
 const ARCHIVE_LIMIT = 60;
 
+/**
+ * "Yeni oyun başladı" kararı için eşikler.
+ *
+ * Sanal kaydırıcıda görünen sıra numaralarının aniden düşmesinin İKİ sebebi var:
+ * gerçekten yeni oyun başlamıştır ya da kullanıcı log'u yukarı kaydırıp geçmişe
+ * bakmaktadır. İkincisini yeni oyun sanmak felaket: sayım sıfırlanır ve geri
+ * dönüldüğünde aradaki bütün satırlar "okunamadı" diye raporlanır.
+ *
+ * Bu yüzden sıfırlama üç şartın hepsini ister:
+ *   - kaydırıcı en altta (kullanıcı geçmişe bakmıyor)
+ *   - düşük numaralar üst üste birkaç yoklama boyunca sürüyor
+ *   - en yüksek numara gerçekten başlangıç bölgesinde
+ */
+const NEW_GAME_POLLS = 4; // ~2.8 sn
+const NEW_GAME_MAX_INDEX = 30;
+const SCROLL_BOTTOM_SLACK = 60; // px
+
 /** Bu eleman gerçekten log kutusu mu? (sohbet kutusu da sanal kaydırıcı olabilir) */
 function looksLikeLog(el, minHits = 2) {
   if (!el || el.children.length < 2) return false;
@@ -207,6 +224,39 @@ export class LogWatcher {
     this.archive = [];
     this.observer = null;
     this.timer = null;
+    this.restartStreak = 0;
+  }
+
+  /** Satırların kaydığı asıl kutu (log elemanının kendisi ya da bir atası). */
+  _scroller() {
+    let el = this.logEl;
+    for (let i = 0; el && i < 4; i += 1) {
+      if (el.scrollHeight > el.clientHeight + 20) return el;
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  /** Kullanıcı log'u yukarı kaydırmış, geçmişe bakıyor mu? */
+  isBrowsingHistory() {
+    const sc = this._scroller();
+    if (!sc) return false;
+    return sc.scrollHeight - sc.scrollTop - sc.clientHeight > SCROLL_BOTTOM_SLACK;
+  }
+
+  /**
+   * Numaralar düştü — yeni oyun mu, yoksa kullanıcı yukarı mı kaydırdı?
+   * Emin olamadığımız her durumda "hayır" deriz: yanlış sıfırlama, geç
+   * sıfırlamadan çok daha pahalı (⟲ ile elle sıfırlamak zaten mümkün).
+   */
+  _looksLikeNewGame(maxIdx) {
+    const dropped = maxIdx >= 0 && maxIdx + 5 < this.lastIndex;
+    if (!dropped || this.isBrowsingHistory()) {
+      this.restartStreak = 0;
+      return false;
+    }
+    this.restartStreak += 1;
+    return maxIdx <= NEW_GAME_MAX_INDEX && this.restartStreak >= NEW_GAME_POLLS;
   }
 
   start() {
@@ -230,9 +280,9 @@ export class LogWatcher {
     if (this.logEl && !document.contains(this.logEl)) this.logEl = null;
 
     if (this.logEl) {
-      // Sıra numaraları başa döndüyse yeni oyun başlamıştır.
+      // Sıra numaraları başa döndüyse yeni oyun başlamış OLABİLİR.
       const maxIdx = this._rows().reduce((m, r) => Math.max(m, r.idx), -1);
-      if (maxIdx >= 0 && maxIdx + 5 < this.lastIndex) this._reset();
+      if (this._looksLikeNewGame(maxIdx)) this._reset();
       return;
     }
 
@@ -256,6 +306,7 @@ export class LogWatcher {
     this.seen = new WeakSet();
     this.lastIndex = -1;
     this.archive = [];
+    this.restartStreak = 0;
     this.onReset();
   }
 

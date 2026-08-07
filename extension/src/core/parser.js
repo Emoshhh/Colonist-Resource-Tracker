@@ -47,6 +47,7 @@ export const SNIPPETS = {
     'has disconnected',
     'has reconnected',
     'last player remaining',
+    'was kicked',
     // haydut / ambargo bilgilendirmeleri
     'friendly robber is active',
     'tiles available to block',

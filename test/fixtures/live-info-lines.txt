@@ -4,3 +4,4 @@ You are the last player remaining. You will be awarded the win in 100 seconds if
 TheBigLion has reconnected
 Bot is selecting where to place Robber for TheBigLion
 Bot is selecting cards to discard for TheBigLion
+Barger8063 is inactive and was kicked.

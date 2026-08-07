@@ -138,7 +138,10 @@ yukarı kayanlar tamamen silinir. Yani eklenti log geçmişini geriye dönük ok
 
 - Eklentiyi **oyun başlamadan önce** açık tut (sekme açıkken masaya otur) — kart türlerini
   ancak böyle baştan sona takip edebilir.
-- Oynarken log'u yukarı kaydırıp öyle bırakma; yeni satırlar DOM'a hiç girmez.
+- Log'u yukarı kaydırıp geçmişe bakabilirsin, sayım bozulmaz: watcher kaydırma
+  konumuna bakıp bunu "yeni oyun" sanmaz ve zaten okunmuş satırları tekrar işlemez.
+  Ama **yukarıda bırakırsan** o sırada gelen yeni satırlar DOM'a hiç girmez ve kaçar
+  (panel eşitlemesi toplamları yine de düzeltir).
 - Bir şey kaçarsa panel `⚠ N satır okunamadı` der. Satırlar `data-index` sırasıyla
   takip edildiği için kaçan satır sayısı kesin bilinir; sessizce yanlış sayı göstermez.
 
