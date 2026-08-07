@@ -42,6 +42,11 @@ export const SNIPPETS = {
     'is blocked by the robber',
     'no resources produced',
     'selecting cards to discard',
+    'is selecting where to place',
+    // bağlantı kopması / bot devralma bildirimleri
+    'has disconnected',
+    'has reconnected',
+    'last player remaining',
     // haydut / ambargo bilgilendirmeleri
     'friendly robber is active',
     'tiles available to block',

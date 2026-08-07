@@ -65,8 +65,8 @@ Sayılar tutuyorsa hiçbir şey görünmez — sessiz doğrulama. Tutmuyorsa far
 
 Biri 8+ kartla 7'ye yakalanınca yarısını atar. Bu satır iki yoldan işlenir:
 
-1. **Log satırı okunursa** (`Cuda discarded 🌲🌾`) atılan kartlar tam olarak düşülür —
-   en iyi durum, tür bilgisi de korunur.
+1. **Log satırı okunursa** — `TheBigLion discarded ⛏⛏🐑🐑🌲` biçiminde geliyor (canlı oyundan
+   doğrulandı, `test/fixtures/live-rows.html`). Atılan kartlar tam olarak düşülür, tür bilgisi korunur.
 2. **Okunamazsa** (metin değişmiş, satır kaçmış, ya da hiç yazılmamışsa) panel devreye
    girer: oyun "Cuda'nın 4 kartı var" diyorsa ve bizim hesapta 8 varsa, **4 kart türü
    bilinmeden çıkarılır**. Hangi 4'ü gittiği elin bileşimine göre dallandırılır — yani

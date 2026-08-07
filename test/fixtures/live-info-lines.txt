@@ -1,0 +1,6 @@
+Player has no cards
+TheBigLion has disconnected. A bot will take over next turn unless TheBigLion reconnects.
+You are the last player remaining. You will be awarded the win in 100 seconds if your opponent does not reconnect.
+TheBigLion has reconnected
+Bot is selecting where to place Robber for TheBigLion
+Bot is selecting cards to discard for TheBigLion

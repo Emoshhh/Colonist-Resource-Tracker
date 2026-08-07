@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 import { parseHtml, queryAll } from './helpers/html.mjs';
 import { elementToParts, hasContent } from '../extension/src/dom/log-reader.js';
-import { parseMessage, playersIn } from '../extension/src/core/parser.js';
+import { parseMessage, playersIn, avatarOf } from '../extension/src/core/parser.js';
 import { Game } from '../extension/src/core/game.js';
 
 const FIXTURE = readFileSync(
@@ -35,18 +35,18 @@ const ROWS = rows();
 const partsOf = (idx) => elementToParts(ROWS.get(idx));
 const eventOf = (idx, ctx = {}) => parseMessage(partsOf(idx), { players: ['Emosh', 'TheBigLion'], ...ctx });
 
+const INFO_LINES = readFileSync(
+  fileURLToPath(new URL('./fixtures/live-info-lines.txt', import.meta.url)),
+  'utf8',
+)
+  .split('\n')
+  .filter((l) => l.trim());
+
 test('fixture beklenen satırları içeriyor', () => {
-  assert.deepEqual([...ROWS.keys()].sort((a, b) => a - b), [
-    '19',
-    '113',
-    '114',
-    '115',
-    '116',
-    '117',
-    '118',
-    '119',
-    '120',
-  ]);
+  assert.deepEqual(
+    [...ROWS.keys()].sort((a, b) => a - b),
+    ['19', '113', '114', '115', '116', '117', '118', '119', '120', '124', '126', '167', '221', '222', '229', '252', '315', '413', '446'],
+  );
 });
 
 test('4 buğday -> 1 odun banka takası', () => {
@@ -96,6 +96,72 @@ test('gelişim kartı alımı tanınır', () => {
   assert.equal(ev.kind, 'buy');
   assert.equal(ev.item, 'devcard');
   assert.equal(ev.player, 'TheBigLion');
+});
+
+// 7 gelince atılan kartların GERÇEK satırı. Uzun süre canlı görülemediği için
+// kalıp doğrulanamıyordu; bu iki satır artık kaydı tutuyor: "<Ad> discarded <ikonlar>".
+test('kart atma satırı gerçek metniyle tanınır', () => {
+  const rival = eventOf('252');
+  assert.equal(rival.kind, 'lose');
+  assert.equal(rival.reason, 'discard');
+  assert.equal(rival.player, 'TheBigLion');
+  assert.deepEqual(rival.res, { ore: 2, wool: 2, lumber: 1 });
+
+  const mine = eventOf('315');
+  assert.equal(mine.kind, 'lose');
+  assert.equal(mine.player, 'Emosh');
+  assert.deepEqual(mine.res, { lumber: 4, brick: 1 });
+});
+
+test('şövalye / tekel / yol yapımı kartları tooltip içinden okunur', () => {
+  assert.deepEqual(eventOf('124'), { kind: 'playDev', player: 'Emosh', card: 'knight' });
+  assert.deepEqual(eventOf('221'), { kind: 'playDev', player: 'TheBigLion', card: 'monopoly' });
+  assert.deepEqual(eventOf('229'), { kind: 'playDev', player: 'Emosh', card: 'roadbuilding' });
+});
+
+test('tekel satırı miktarıyla okunur', () => {
+  const ev = eventOf('222');
+  assert.equal(ev.kind, 'monopoly');
+  assert.equal(ev.player, 'TheBigLion');
+  assert.equal(ev.res, 'grain');
+  assert.equal(ev.amount, 4);
+});
+
+test('"sen" içeren çalma satırları kendi adımızla çözülür', () => {
+  const iStole = eventOf('126', { me: 'Emosh' });
+  assert.deepEqual(iStole, {
+    kind: 'stealKnown',
+    thief: 'Emosh',
+    victim: 'TheBigLion',
+    res: 'ore',
+  });
+
+  const stolenFromMe = eventOf('167', { me: 'Emosh' });
+  assert.deepEqual(stolenFromMe, {
+    kind: 'stealKnown',
+    thief: 'TheBigLion',
+    victim: 'Emosh',
+    res: 'lumber',
+  });
+});
+
+// Oyuncu bağlantısını kaybedince yerine bot geçiyor: aynı ad, bot avatarı.
+// Satırın işlenmesi değişmemeli, yalnız avatar 'bot' olarak raporlanmalı.
+test('bot devraldığında satırlar aynı şekilde işlenir', () => {
+  assert.equal(avatarOf(partsOf('413')), 'bot');
+  assert.equal(eventOf('413', { me: 'Emosh' }).kind, 'stealKnown');
+
+  assert.equal(avatarOf(partsOf('446')), 'bot');
+  const gain = eventOf('446');
+  assert.equal(gain.kind, 'gain');
+  assert.deepEqual(gain.res, { ore: 2, grain: 1 });
+});
+
+test('bağlantı / bot bilgilendirme satırları yok sayılır', () => {
+  for (const text of INFO_LINES) {
+    const ev = parseMessage([{ t: 'text', v: text }], { players: ['Emosh', 'TheBigLion'] });
+    assert.equal(ev.kind, 'ignore', text);
+  }
 });
 
 test('satır dizisi baştan sona işlendiğinde tanınmayan satır kalmaz', () => {
