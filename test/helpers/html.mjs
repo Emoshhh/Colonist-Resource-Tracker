@@ -52,6 +52,18 @@ function textNode(value) {
   return { nodeType: 3, nodeValue: value, childNodes: [] };
 }
 
+/** `style="color:#fff;font-weight:600"` -> `{ color: '#fff', fontWeight: '600' }` */
+function parseStyle(raw) {
+  const out = {};
+  for (const decl of String(raw || '').split(';')) {
+    const i = decl.indexOf(':');
+    if (i < 0) continue;
+    const key = decl.slice(0, i).trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    if (key) out[key] = decl.slice(i + 1).trim();
+  }
+  return out;
+}
+
 function makeElement(tag, attrs) {
   const children = [];
   const node = {
@@ -59,6 +71,7 @@ function makeElement(tag, attrs) {
     tagName: tag.toUpperCase(),
     attrs,
     className: attrs.class || '',
+    style: parseStyle(attrs.style),
     childNodes: children,
     getAttribute: (key) => {
       const k = String(key).toLowerCase();
@@ -147,7 +160,8 @@ export function queryAll(root, sel) {
 }
 
 /** HTML metnini ayrıştırır; tek kök varsa onu, yoksa sahte bir kök döndürür. */
-export function parseHtml(html) {
+export function parseHtml(source) {
+  const html = String(source).replace(/<!--[\s\S]*?-->/g, '');
   const root = makeElement('div', {});
   const stack = [root];
   const re = /<\/?([a-zA-Z][-a-zA-Z0-9]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/g;

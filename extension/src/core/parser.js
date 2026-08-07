@@ -46,6 +46,8 @@ export const SNIPPETS = {
     'friendly robber is active',
     'tiles available to block',
     'no player to steal from',
+    // haydut çalmaya çalıştı ama hedefin eli boştu (kaynak hareketi yok)
+    'has no cards',
     'blocked trading with',
     'longest road',
     'largest army',
