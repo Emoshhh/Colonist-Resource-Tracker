@@ -43,6 +43,9 @@ export const SNIPPETS = {
     'no resources produced',
     'selecting cards to discard',
     'is selecting where to place',
+    // "Bot is placing a Settlement for X" — hamlenin kendisi değil, duyurusu.
+    // Gerçek yerleştirme ayrı satırda "X placed a Settlement" olarak geliyor.
+    'is placing',
     // bağlantı kopması / bot devralma bildirimleri
     'has disconnected',
     'has reconnected',

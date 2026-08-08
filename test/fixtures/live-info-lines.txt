@@ -5,3 +5,5 @@ TheBigLion has reconnected
 Bot is selecting where to place Robber for TheBigLion
 Bot is selecting cards to discard for TheBigLion
 Barger8063 is inactive and was kicked.
+Bot is placing a Settlement for Dorsey7140
+Bot is placing a road for Dorsey7140
