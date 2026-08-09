@@ -135,6 +135,26 @@ function debugSummary() {
     lines.push(`${row.name}${row.isMe ? ' (ben)' : ''}: panel ${row.cards}/${row.devCards} · ${cmp}`);
   }
 
+  // Düzeltmelerin DÖKÜMÜ: yalnız sayısını görmek "neden" sorusuna cevap vermiyor.
+  // Kim, hangi yönde, kaç kart, kaçıncı zarda — asıl teşhis bilgisi bu.
+  if (game.corrections.length) {
+    const shown = game.corrections.slice(-15);
+    const dev = game.corrections.filter((c) => c.kind === 'dev').length;
+    lines.push(
+      '',
+      `--- panel düzeltmeleri (${game.corrections.length} tane: ` +
+        `${game.corrections.length - dev} kart, ${dev} gelişim kartı) ---`,
+    );
+    if (shown.length < game.corrections.length) lines.push(`(son ${shown.length} tanesi)`);
+    for (const c of shown) {
+      const what = c.kind === 'dev' ? 'GK' : 'kart';
+      const dir = c.to > c.from ? '+' : '-';
+      lines.push(
+        `zar ${c.atRoll ?? '?'} · ${c.player} · ${what} ${c.from} -> ${c.to} (${dir}${Math.abs(c.to - c.from)})`,
+      );
+    }
+  }
+
   lines.push('', '--- hesaplanan eller (kesin alt sınır + bilinmeyen) ---');
   for (const p of rep.players) {
     const cells = p.res.map((c) => `${c.res[0].toUpperCase()}${c.min}${c.certain ? '' : '+'}`).join(' ');

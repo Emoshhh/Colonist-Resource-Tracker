@@ -70,9 +70,16 @@ test('kaçan kart atma satırı panelden kapanır', () => {
   assert.equal(of(g.report(), 'Cuda').totalMax, 8);
 
   // 7 geldi, Cuda 4 kart attı ama satırı okuyamadık; panel 4 diyor.
+  g.rollCount = 17; // düzeltmenin ne zaman olduğu döküme yazılıyor
   const fixes = g.syncWithPanel([{ name: 'Cuda', cards: 4, devCards: 0 }]);
   assert.equal(fixes.length, 1);
-  assert.deepEqual(fixes[0], { player: 'Cuda', kind: 'cards', from: 8, to: 4 });
+  assert.deepEqual(fixes[0], {
+    player: 'Cuda',
+    kind: 'cards',
+    from: 8,
+    to: 4,
+    atRoll: 17,
+  });
 
   const cuda = of(g.report(), 'Cuda');
   assert.equal(cuda.totalMax, 4);
@@ -122,7 +129,7 @@ test('gelişim kartı sayısı panelden kesinlenir', () => {
   const g = new Game(['Emosh']);
   g.tracker.devCardBought('Emosh');
   const fixes = g.syncWithPanel([{ name: 'Emosh', cards: 0, devCards: 3 }]);
-  assert.deepEqual(fixes, [{ player: 'Emosh', kind: 'dev', from: 1, to: 3 }]);
+  assert.deepEqual(fixes, [{ player: 'Emosh', kind: 'dev', from: 1, to: 3, atRoll: 0 }]);
   assert.equal(of(g.report(), 'Emosh').devCards, 3);
 });
 

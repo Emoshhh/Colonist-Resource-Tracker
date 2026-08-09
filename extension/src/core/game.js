@@ -48,7 +48,13 @@ export class Game {
         const mine = this.tracker.devCards.get(row.name) || 0;
         if (mine !== row.devCards) {
           this.tracker.setDevCards(row.name, row.devCards);
-          applied.push({ player: row.name, kind: 'dev', from: mine, to: row.devCards });
+          applied.push({
+            player: row.name,
+            kind: 'dev',
+            from: mine,
+            to: row.devCards,
+            atRoll: this.rollCount,
+          });
         }
       }
 
@@ -60,7 +66,13 @@ export class Game {
 
       if (diff < 0) this.tracker.loseUnknown(row.name, -diff);
       else this.tracker.gainUnknown(row.name, diff);
-      applied.push({ player: row.name, kind: 'cards', from: mine, to: row.cards });
+      applied.push({
+        player: row.name,
+        kind: 'cards',
+        from: mine,
+        to: row.cards,
+        atRoll: this.rollCount,
+      });
     }
 
     if (applied.length) {
