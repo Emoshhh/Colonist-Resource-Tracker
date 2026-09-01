@@ -21,6 +21,7 @@ let game = new Game();
 let me = null;
 let manualMe = null;
 let pendingRender = false;
+let renderTimer = null;
 
 /**
  * "You stole from X" satırlarını işleyebilmek için kendi adımızı bilmek gerekir.
@@ -44,6 +45,7 @@ const SYNC_STABLE = 3;
 let msgSeq = 0;
 let syncSig = '';
 let syncHits = 0;
+let forceSync = false;
 
 function refreshPanel() {
   try {
@@ -222,15 +224,32 @@ const overlay = new Overlay({
 function scheduleRender() {
   if (pendingRender) return;
   pendingRender = true;
-  requestAnimationFrame(() => {
+
+  const paint = () => {
+    if (!pendingRender) return;
     pendingRender = false;
+    clearTimeout(renderTimer);
     overlay.setPanelRows(refreshPanel());
     overlay.render(game.report());
-  });
+  };
+
+  // Arka plandaki sekmede requestAnimationFrame HİÇ çalışmaz. Yalnız ona
+  // güvenilirse pendingRender sonsuza kadar true kalır ve sekmeye dönene
+  // dek hiçbir çizim planlanmaz. Bu yüzden zamanlayıcı yedeği var.
+  requestAnimationFrame(paint);
+  renderTimer = setTimeout(paint, 250);
 }
 
 function panelSignature(rows) {
   return rows.map((r) => `${r.name}:${r.cards}:${r.devCards}`).join('|') + `#${msgSeq}`;
+}
+
+function applyPanelSync(rows) {
+  const fixes = game.syncWithPanel(rows);
+  if (fixes.length) {
+    console.log('[colonist-tracker] sayım oyun panelinden düzeltildi', fixes);
+    scheduleRender();
+  }
 }
 
 function panelSyncTick() {
@@ -241,6 +260,16 @@ function panelSyncTick() {
     return;
   }
   const sig = panelSignature(rows);
+
+  // Kaçan satır bilindiğinde bekleme yok: paneldeki sayılar tek doğru kaynak.
+  if (forceSync) {
+    forceSync = false;
+    syncSig = sig;
+    syncHits = SYNC_STABLE;
+    applyPanelSync(rows);
+    return;
+  }
+
   if (sig !== syncSig) {
     syncSig = sig;
     syncHits = 1;
@@ -250,11 +279,7 @@ function panelSyncTick() {
   syncHits += 1;
   if (syncHits < SYNC_STABLE) return;
 
-  const fixes = game.syncWithPanel(rows);
-  if (fixes.length) {
-    console.log('[colonist-tracker] sayım oyun panelinden düzeltildi', fixes);
-    scheduleRender();
-  }
+  applyPanelSync(rows);
 }
 
 function handleMessage(parts) {
@@ -280,6 +305,11 @@ const watcher = new LogWatcher({
   onMessage: handleMessage,
   onGap: (missed) => {
     game.noteMissed(missed);
+    // Satır kaçtığını KESİN biliyoruz; "acaba panel mi geride kaldı" diye
+    // beklemenin anlamı yok. Yine de flush() döngüsü bitsin diye kısa bir
+    // gecikme: eşitleme, henüz işlenmemiş satırların üstüne binmemeli.
+    forceSync = true;
+    setTimeout(panelSyncTick, 400);
     scheduleRender();
   },
   onReset: () => {
@@ -302,6 +332,11 @@ function boot() {
   overlay.setMe(me, meIsAmbiguous());
   watcher.start();
   setInterval(panelSyncTick, SYNC_TICK_MS);
+  // Sekme geri gelince paneli de beklemeden tazele (watcher log'u kendi okuyor).
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    scheduleRender();
+  });
   scheduleRender();
   console.log('[colonist-tracker] hazır');
 }

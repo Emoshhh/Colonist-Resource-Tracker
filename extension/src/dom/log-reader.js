@@ -259,18 +259,50 @@ export class LogWatcher {
     return maxIdx <= NEW_GAME_MAX_INDEX && this.restartStreak >= NEW_GAME_POLLS;
   }
 
+  /**
+   * Log'u hemen tara. Sekme geri gelince çağrılır: arka plandaki sekmede
+   * tarayıcı setInterval'i dakikada bire kadar kısıyor, bu yüzden yalnız
+   * yoklamaya güvenmek geri dönüşü saniyelerce geciktirirdi.
+   */
+  wake() {
+    this._ensureLog();
+    this.flush();
+  }
+
   start() {
     // Sanal kaydırıcıda mutasyonlar kaçabildiği için düzenli yoklama da yapılır.
     this.timer = setInterval(() => {
       this._ensureLog();
       this.flush();
     }, 700);
+
+    // Sekme geri geldiğinde beklemeden oku.
+    this._onWake = () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      this.wake();
+    };
+    if (typeof document !== 'undefined' && document.addEventListener) {
+      document.addEventListener('visibilitychange', this._onWake);
+    }
+    if (typeof window !== 'undefined' && window.addEventListener) {
+      window.addEventListener('focus', this._onWake);
+    }
+
     this._ensureLog();
   }
 
   stop() {
     if (this.timer) clearInterval(this.timer);
     if (this.observer) this.observer.disconnect();
+    if (this._onWake) {
+      if (typeof document !== 'undefined' && document.removeEventListener) {
+        document.removeEventListener('visibilitychange', this._onWake);
+      }
+      if (typeof window !== 'undefined' && window.removeEventListener) {
+        window.removeEventListener('focus', this._onWake);
+      }
+      this._onWake = null;
+    }
     this.timer = null;
     this.observer = null;
   }

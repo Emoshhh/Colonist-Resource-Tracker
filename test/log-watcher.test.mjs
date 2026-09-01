@@ -161,3 +161,98 @@ test('kaydırılabilir kutu yoksa da yukarı kaydırma korunur (numara eşiği)'
   // Görünen numaralar (76..84) başlangıç bölgesinde olmadığı için yine sıfırlanmaz.
   assert.equal(events.resets, 0);
 });
+
+/* ---------------------------------------------------------------- sekme değişimi
+ * Arka plandaki sekmede tarayıcı setInterval'i dakikada bire kadar kısıyor.
+ * Bu yüzden sekme geri geldiğinde yoklamayı beklemeden okumak gerekir.
+ */
+
+/** LogWatcher'ın dinleyici kaydettiği sahte document/window. */
+function fakeGlobals() {
+  const listeners = { doc: {}, win: {} };
+  const doc = {
+    hidden: false,
+    addEventListener: (t, fn) => (listeners.doc[t] = fn),
+    removeEventListener: (t) => delete listeners.doc[t],
+    contains: () => true,
+    querySelector: () => null,
+    querySelectorAll: () => [],
+    body: null,
+  };
+  const win = {
+    addEventListener: (t, fn) => (listeners.win[t] = fn),
+    removeEventListener: (t) => delete listeners.win[t],
+  };
+  return { doc, win, listeners };
+}
+
+/**
+ * Sahte document/window kur, watcher'ı başlat, ne olursa olsun durdur.
+ * (stop() atlanırsa setInterval asılı kalır ve test koşucusu hiç bitmez —
+ * bu bir kez başımıza geldi.)
+ */
+function withTab({ doc, win }, w, fn) {
+  const prevDoc = globalThis.document;
+  const prevWin = globalThis.window;
+  globalThis.document = doc;
+  globalThis.window = win;
+  w.start();
+  try {
+    return fn();
+  } finally {
+    w.stop();
+    globalThis.document = prevDoc;
+    globalThis.window = prevWin;
+  }
+}
+
+test('sekme geri gelince yoklamayı beklemeden okur', () => {
+  const g = fakeGlobals();
+  const { w, events } = makeWatcher();
+
+  withTab(g, w, () => {
+    assert.ok(g.listeners.doc.visibilitychange, 'visibilitychange dinlenmeli');
+    assert.ok(g.listeners.win.focus, 'focus dinlenmeli');
+
+    // Sekme arka plandayken 6 satır aktı; yoklama kısıldığı için okunmadı.
+    w.logEl = scroller({ total: 6 });
+    assert.equal(events.messages, 0);
+
+    // Sekme geri geldi.
+    g.doc.hidden = false;
+    g.listeners.doc.visibilitychange();
+    assert.equal(events.messages, 6, 'dönüşte hemen okunmalı');
+  });
+
+  assert.equal(g.listeners.doc.visibilitychange, undefined, 'stop dinleyiciyi bırakmalı');
+  assert.equal(g.listeners.win.focus, undefined);
+});
+
+test('sekme hâlâ gizliyken uyandırma tetiklenmez', () => {
+  const g = fakeGlobals();
+  const { w, events } = makeWatcher();
+
+  withTab(g, w, () => {
+    w.logEl = scroller({ total: 6 });
+    g.doc.hidden = true; // sekme gizlendi (görünür olmadı)
+    g.listeners.doc.visibilitychange();
+    assert.equal(events.messages, 0);
+  });
+});
+
+test('arka planda kaçan satırlar dönüşte boşluk olarak raporlanır', () => {
+  const g = fakeGlobals();
+  const { w, events } = makeWatcher();
+
+  withTab(g, w, () => {
+    w.logEl = scroller({ total: 9 });
+    w.wake();
+    assert.deepEqual(events.gaps, []);
+
+    // Sekme arka plandayken 40 satır aktı; sanal kaydırıcı yalnız son 9'unu
+    // DOM'da tuttu, aradaki 31 satır tamamen kayboldu.
+    w.logEl = scroller({ total: 49 });
+    w.wake();
+    assert.deepEqual(events.gaps, [31], 'kaybolan satır sayısı kesin bilinmeli');
+  });
+});

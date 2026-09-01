@@ -160,6 +160,13 @@ yukarı kayanlar tamamen silinir. Yani eklenti log geçmişini geriye dönük ok
   konumuna bakıp bunu "yeni oyun" sanmaz ve zaten okunmuş satırları tekrar işlemez.
   Ama **yukarıda bırakırsan** o sırada gelen yeni satırlar DOM'a hiç girmez ve kaçar
   (panel eşitlemesi toplamları yine de düzeltir).
+- **Başka sekmeye geçebilirsin.** Tarayıcı arka plandaki sekmede zamanlayıcıları
+  dakikada bire kadar kısıyor, bu yüzden eklenti `visibilitychange`/`focus` olaylarını
+  da dinler: sekmeye döndüğün anda log'u bekletmeden okur. Uzun süre uzakta kalırsan
+  colonist'in sanal kaydırıcısı aradaki satırları DOM'dan tamamen silmiş olabilir —
+  o satırlar geri gelmez, ama kaç tane olduğu `data-index`'ten kesin bilinir ve
+  **toplamlar oyunun kendi panelinden anında düzeltilir** (bekleme yok). Sadece o
+  kartların türü `?` sütununa düşer.
 - Bir şey kaçarsa panel `⚠ N satır okunamadı` der. Satırlar `data-index` sırasıyla
   takip edildiği için kaçan satır sayısı kesin bilinir; sessizce yanlış sayı göstermez.
 
