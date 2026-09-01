@@ -76,6 +76,18 @@ export const PIECE_LABEL = { road: 'Yol', settlement: 'Köy', city: 'Şehir' };
 export const PIECE_SHORT = { road: 'Y', settlement: 'K', city: 'Ş' };
 export const PIECE_COLOR = { road: '#a1887f', settlement: '#ef9a9a', city: '#9fa8da' };
 
+/**
+ * Yapı başlıkları için varsayılan görseller (siyah oyuncu renginin taşları).
+ * Log'da bir inşa satırı görülür görülmez oradaki gerçek görselle değiştirilir;
+ * bunlar yalnız oyunun ilk saniyeleri ve dosya adı hash'i değişmediği sürece
+ * geçerli. Kart görsellerinde de aynı yaklaşım kullanılıyor.
+ */
+export const DEFAULT_BUILDING_ICONS = {
+  road: 'https://cdn.colonist.io/dist/assets/road_black.6f85c9480c8f0d89d58a.svg',
+  settlement: 'https://cdn.colonist.io/dist/assets/settlement_black.c687de87c2493d1624ea.svg',
+  city: 'https://cdn.colonist.io/dist/assets/city_black.7d1ff2a9a5057982225b.svg',
+};
+
 export const COSTS = {
   road: { lumber: 1, brick: 1 },
   settlement: { lumber: 1, brick: 1, wool: 1, grain: 1 },

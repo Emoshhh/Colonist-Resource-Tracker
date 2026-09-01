@@ -7,6 +7,7 @@ import {
   RES_LABEL,
   RES_COLOR,
   DEFAULT_CARD_ICONS,
+  DEFAULT_BUILDING_ICONS,
   PIECE_SUPPLY,
   PIECE_LABEL,
   PIECE_SHORT,
@@ -323,7 +324,7 @@ export class Overlay {
    * Görseller oyuncu rengine göre değiştiği için ilk görülen kullanılır.
    */
   _buildingIcon(item) {
-    const src = this.icons[item];
+    const src = this.icons[item] || DEFAULT_BUILDING_ICONS[item];
     const chip = () => {
       const node = el('span', 'ct-chip', PIECE_SHORT[item]);
       node.style.background = PIECE_COLOR[item];

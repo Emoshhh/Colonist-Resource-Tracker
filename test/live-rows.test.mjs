@@ -13,6 +13,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { parseHtml, queryAll } from './helpers/html.mjs';
+import { imageToBuilding, imageToResource, isDevCardImage } from '../extension/src/core/resources.js';
 import { elementToParts, hasContent } from '../extension/src/dom/log-reader.js';
 import { parseMessage, playersIn, avatarOf } from '../extension/src/core/parser.js';
 import { Game } from '../extension/src/core/game.js';
@@ -48,8 +49,8 @@ test('fixture beklenen satırları içeriyor', () => {
     [...ROWS.keys()].sort((a, b) => a - b),
     // prettier-ignore
     ['19', '33', '92', '113', '114', '115', '116', '117', '118', '119', '120', '124',
-     '126', '167', '221', '222', '229', '236', '237', '252', '315', '355', '361',
-     '413', '446', '472'],
+     '126', '167', '221', '222', '229', '236', '237', '252', '315', '333', '355',
+     '361', '413', '446', '472'],
   );
 });
 
@@ -239,4 +240,40 @@ test('satır dizisi baştan sona işlendiğinde tanınmayan satır kalmaz', () =
   assert.deepEqual(game.unknownMessages, []);
   assert.equal(game.tracker.desyncs.length, 0);
   assert.equal(game.rollCount, 1);
+});
+
+// Panel başlığında yol/köy/şehir için oyunun KENDİ simgeleri kullanılıyor;
+// adresler log satırlarından toplanıyor. Bu eşleme bozulursa başlık harf
+// rozetine düşer ve kullanıcı farkı hemen görür.
+test('yapı simgeleri log satırlarından toplanabiliyor', () => {
+  const found = {};
+  for (const el of ROWS.values()) {
+    for (const part of elementToParts(el)) {
+      if (part.t !== 'img' || !part.v) continue;
+      if (imageToResource(part.v) || isDevCardImage(part.v)) continue;
+      const item = imageToBuilding(part.v);
+      if (item && !found[item]) found[item] = part.v;
+    }
+  }
+  assert.match(found.road || '', /road_black/, 'yol simgesi bulunmalı');
+  assert.match(found.settlement || '', /settlement_/, 'köy simgesi bulunmalı');
+  assert.match(found.city || '', /city_/, 'şehir simgesi bulunmalı');
+});
+
+test('arazi ve rozet görselleri yapı simgesi sanılmaz', () => {
+  for (const el of ROWS.values()) {
+    for (const part of elementToParts(el)) {
+      if (part.t !== 'img' || !part.v) continue;
+      if (/generated_tile|prob_|icon_|dice_|card_/.test(part.v)) {
+        assert.equal(imageToBuilding(part.v), null, part.v);
+      }
+    }
+  }
+});
+
+test('yol yerleştirme satırı tanınır', () => {
+  const ev = eventOf('333');
+  assert.equal(ev.kind, 'place');
+  assert.equal(ev.item, 'road');
+  assert.equal(ev.player, 'Emosh');
 });

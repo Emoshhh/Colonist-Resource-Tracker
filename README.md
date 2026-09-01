@@ -49,7 +49,9 @@ Toplam kart sayısı (Σ) her zaman kesindir — çalma toplamı değiştirmez, 
 ## Kalan yapı taşları
 
 Son üç sütun her oyuncunun elinde **kaç yol, köy ve şehir taşı kaldığını** gösterir
-(başlangıç: 15 yol, 5 köy, 4 şehir). Kaynak sayımından bağımsız, sadece inşa
+(başlangıç: 15 yol, 5 köy, 4 şehir). Başlıklarda oyunun kendi
+yol/köy/şehir simgeleri kullanılır — adresleri log'daki inşa satırlarından toplanır,
+görsel hiç gelmezse Y/K/Ş harf rozetine düşülür. Kaynak sayımından bağımsız, sadece inşa
 satırları sayılarak tutulur.
 
 - **2 ve altı sarı, 0 kırmızı** yazılır: 0 yol demek, kaynağı olsa bile artık yol
