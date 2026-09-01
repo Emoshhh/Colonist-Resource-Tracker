@@ -9,7 +9,7 @@
   top: 90px;
   right: 16px;
   z-index: 2147483000;
-  width: calc(348px * var(--ct-scale));
+  width: calc(404px * var(--ct-scale));
   font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: calc(12px * var(--ct-scale));
   color: #e8ecf1;
@@ -188,6 +188,27 @@
   font-weight: 400;
 }
 
+/* kalan yapı taşları: yol / köy / şehir */
+#colonist-tracker .ct-piece {
+  color: #9fb3c8;
+}
+
+#colonist-tracker .ct-piece-th {
+  opacity: 0.85;
+}
+
+/* 2 ve altı: yakında bitiyor */
+#colonist-tracker .ct-piece-low {
+  color: #ffd88a;
+  font-weight: 600;
+}
+
+/* bitti: artık bu yapıdan kuramaz */
+#colonist-tracker .ct-piece-out {
+  color: #ff8b7a;
+  font-weight: 700;
+}
+
 #colonist-tracker .ct-btn-on {
   background: rgba(255, 176, 32, 0.25);
   color: #ffd88a;
@@ -234,7 +255,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  height: calc(46px * var(--ct-scale));
+  height: calc(60px * var(--ct-scale));
   gap: 2px;
 }
 
@@ -251,6 +272,19 @@
   min-height: 1px;
   background: linear-gradient(180deg, #6fb1ff, #2f6fd0);
   border-radius: 2px 2px 0 0;
+}
+
+/* çubuğun üstündeki kaç kez geldiği sayısı */
+#colonist-tracker .ct-bar-count {
+  font-size: calc(8px * var(--ct-scale));
+  line-height: 1.1;
+  color: #b9c3d0;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: calc(1px * var(--ct-scale));
+}
+
+#colonist-tracker .ct-bar-count.ct-zero {
+  color: #4a5560;
 }
 
 #colonist-tracker .ct-bar-label {

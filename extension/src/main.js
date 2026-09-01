@@ -6,7 +6,12 @@ import { Game } from './core/game.js';
 import { parseMessage, playersIn, avatarOf } from './core/parser.js';
 import { LogWatcher, findOwnUsername } from './dom/log-reader.js';
 import { readPlayerPanel } from './dom/player-panel.js';
-import { imageToResource, isDevCardImage, isHiddenCardImage } from './core/resources.js';
+import {
+  imageToResource,
+  imageToBuilding,
+  isDevCardImage,
+  isHiddenCardImage,
+} from './core/resources.js';
 import { Overlay } from './ui/overlay.js';
 
 const DEBUG = false;
@@ -68,6 +73,12 @@ function collectIcons(parts) {
     if (res) found[res] = part.v;
     else if (isDevCardImage(part.v)) found.devcard = part.v;
     else if (isHiddenCardImage(part.v)) found.unknown = part.v;
+    else {
+      // Yol/köy/şehir görselleri oyuncu rengine göre değişiyor; başlıkta
+      // ilk görüleni kullanmak yeterli, bir daha güncellemiyoruz.
+      const item = imageToBuilding(part.v);
+      if (item && !overlay.icons[item]) found[item] = part.v;
+    }
   }
   if (Object.keys(found).length) overlay.setIcons(found);
 }
@@ -158,7 +169,11 @@ function debugSummary() {
   lines.push('', '--- hesaplanan eller (kesin alt sınır + bilinmeyen) ---');
   for (const p of rep.players) {
     const cells = p.res.map((c) => `${c.res[0].toUpperCase()}${c.min}${c.certain ? '' : '+'}`).join(' ');
-    lines.push(`${p.name}: ${cells} · ? ${p.unknown} · toplam ${p.totalMax} · GK ${p.devCards}`);
+    const pc = p.pieces || {};
+    lines.push(
+      `${p.name}: ${cells} · ? ${p.unknown} · toplam ${p.totalMax} · GK ${p.devCards}` +
+        ` · yol ${pc.road} köy ${pc.settlement} şehir ${pc.city}`,
+    );
   }
   return lines.join('\n');
 }

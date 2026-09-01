@@ -10,7 +10,7 @@
  * böylece aynı sonuca varan dallar otomatik birleşir.
  */
 
-import { RESOURCES, RES_INDEX, emptyHand, vectorSum } from './resources.js';
+import { RESOURCES, RES_INDEX, emptyHand, vectorSum, PIECE_SUPPLY } from './resources.js';
 
 const EPSILON = 1e-9;
 const R = RESOURCES.length;
@@ -45,6 +45,7 @@ export class Tracker {
   constructor(players = []) {
     this.players = [];
     this.devCards = new Map(); // oyuncu -> elindeki (oynanmamış) gelişim kartı sayısı
+    this.pieces = new Map(); // oyuncu -> kalan yapı taşları { road, settlement, city }
     this.worlds = new Map();
     this.desyncs = [];
     this.history = [];
@@ -64,6 +65,7 @@ export class Tracker {
     if (!name || this.hasPlayer(name)) return this.players.indexOf(name);
     this.players.push(name);
     this.devCards.set(name, 0);
+    this.pieces.set(name, { ...PIECE_SUPPLY });
     const next = new Map();
     for (const [key, w] of this.worlds) {
       const hands = decode(key, this.players.length - 1);
@@ -208,6 +210,24 @@ export class Tracker {
       }
       return cur;
     });
+  }
+
+  /**
+   * Yapı stoğundan bir taş düş.
+   *
+   * Şehir, var olan bir KÖYÜN üstüne kurulur: köy taşı oyuncuya geri döner.
+   * Bu yüzden şehir kurmak köy stoğunu azaltmaz, artırır.
+   * Kurulum aşamasında ve yol yapımı kartıyla yapılan yollar bedavadır ama
+   * taşı yine harcar; bu yüzden maliyetten bağımsız çağrılır.
+   */
+  placePiece(player, item) {
+    this.idx(player);
+    const left = this.pieces.get(player);
+    if (!left || !(item in left)) return;
+    left[item] = Math.max(0, left[item] - 1);
+    if (item === 'city') {
+      left.settlement = Math.min(PIECE_SUPPLY.settlement, left.settlement + 1);
+    }
   }
 
   /** Gelişim kartı sayısını dışarıdan (oyun panelinden) kesinle. */
@@ -370,6 +390,7 @@ export class Tracker {
         name,
         res,
         devCards: this.devCards.get(name) || 0,
+        pieces: { ...(this.pieces.get(name) || PIECE_SUPPLY) },
         totalMin: Number.isFinite(totalMin) ? totalMin : 0,
         totalMax: total,
         known,

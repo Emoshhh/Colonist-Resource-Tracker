@@ -6,16 +6,18 @@ ve ekranın köşesinde sürüklenebilir bir panelde gösterir. Sayımı oyunun 
 sürekli karşılaştırır, böylece kaçan bir log satırı sessizce yanlış sayıya dönüşmez.
 
 ```
-┌────────────────────────────────────┐
-│ ● Kaynak Takibi    % 🎲 ⟲ ⧉ –      │
-├────────────────────────────────────┤
-│        🌲 🧱 🐑 🌾 ⛏  ?  Σ  GK     │
-│ Ali     1  0  2  1  0  0  4   1    │  ← eli tamamen biliniyor
-│ Veli    0  1  1  0  1  2  5   0    │  ← 2 kartın türü bilinmiyor
-│              ‾        ‾            │  ← noktalı alt çizgi: daha fazlası olabilir
-├────────────────────────────────────┤
-│ ▁▃█▅▂▁▃▁▂▁▁  2..12 · 41 zar        │
-└────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│ ● Kaynak Takibi      % 🎲 ⤢ ⟲ ⧉ –            │
+├──────────────────────────────────────────────┤
+│         🌲 🧱 🐑 🌾 ⛏  ?  Σ  GK │ 🛣 🏠 🏛   │
+│ Ali      1  0  2  1  0  0  4  1 │ 13  3  4   │  ← eli tamamen biliniyor
+│ Veli     0  1  1  0  1  2  5  0 │  0  2  3   │  ← 2 kartın türü bilinmiyor
+│               ‾        ‾        │  ↑          │     yolu bitmiş: artık yol yapamaz
+├──────────────────────────────────────────────┤
+│  3  6  9 13 17 21 16 12  8  5  3             │  ← kaç kez geldiği
+│  ▁  ▂  ▃  ▄  ▆  █  ▆  ▄  ▃  ▂  ▁   113 zar   │
+│  2  3  4  5  6  7  8  9 10 11 12             │
+└──────────────────────────────────────────────┘
 ```
 
 Kaynak sütunlarında **kesin olarak bildiğimiz** sayı yazar — "en az bu kadar var".
@@ -43,6 +45,21 @@ Panel bu iç durumu iki sayıya indirger: her kaynak için **garanti alt sınır
 toplamı olan `?` sütunu. Hücrenin üstüne gelince üst sınır ve olasılık da görünür.
 
 Toplam kart sayısı (Σ) her zaman kesindir — çalma toplamı değiştirmez, sadece yerini değiştirir.
+
+## Kalan yapı taşları
+
+Son üç sütun her oyuncunun elinde **kaç yol, köy ve şehir taşı kaldığını** gösterir
+(başlangıç: 15 yol, 5 köy, 4 şehir). Kaynak sayımından bağımsız, sadece inşa
+satırları sayılarak tutulur.
+
+- **2 ve altı sarı, 0 kırmızı** yazılır: 0 yol demek, kaynağı olsa bile artık yol
+  yapamaz — en uzun yol yarışında bu belirleyici olabilir.
+- **Şehir kurmak köy taşını geri verir.** Şehir var olan bir köyün üstüne kurulduğu
+  için köy taşı oyuncuya döner; sütun bunu doğru işler.
+- Kurulumdaki ve yol yapımı kartıyla kurulan yollar bedavadır ama **taşı yine harcar**.
+
+Bu sayı oyunun kendi panelinde yazmadığı için çapraz doğrulaması yok: bir inşa satırı
+kaçarsa taş sayısı olduğundan yüksek kalır (⟲ ile sıfırlanır).
 
 ## İki kaynak: log + oyunun kendi paneli
 
@@ -112,7 +129,7 @@ senin oyundaki adını bilmesi gerekir.
 | Düğme | İşlev |
 |-------|-------|
 | % | Olasılıklı görünüm: kesin sayı yerine beklenen değer + aralık |
-| 🎲 | Zar istatistiği grafiğini aç/kapat |
+| 🎲 | Zar istatistiği grafiğini aç/kapat (çubukların üstünde kaç kez geldiği yazar) |
 | ⤢ | Panel boyutu: küçük → normal → büyük (seçim saklanır) |
 | ⟲ | Sayacı sıfırla ve log'u baştan oku |
 | ⧉ | Tanınmayan log satırlarını + ham log'u panoya kopyala |

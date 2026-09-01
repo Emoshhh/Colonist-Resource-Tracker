@@ -67,6 +67,15 @@ export const HIDDEN_CARD_IMAGES = ['card_rescardback', 'rescardback', 'cardback'
 
 export const DEV_CARD_IMAGES = ['card_devcardback', 'devcardback'];
 
+/**
+ * Her oyuncunun yapı stoğu (standart Catan kuralı).
+ * Şehir bir köyün üstüne kurulduğu için köy taşı stoğa geri döner.
+ */
+export const PIECE_SUPPLY = { road: 15, settlement: 5, city: 4 };
+export const PIECE_LABEL = { road: 'Yol', settlement: 'Köy', city: 'Şehir' };
+export const PIECE_SHORT = { road: 'Y', settlement: 'K', city: 'Ş' };
+export const PIECE_COLOR = { road: '#a1887f', settlement: '#ef9a9a', city: '#9fa8da' };
+
 export const COSTS = {
   road: { lumber: 1, brick: 1 },
   settlement: { lumber: 1, brick: 1, wool: 1, grain: 1 },
@@ -180,4 +189,20 @@ export function isHiddenCardImage(raw) {
 export function isDevCardImage(raw) {
   const name = normalizeImageName(raw);
   return DEV_CARD_IMAGES.some((d) => name.includes(d));
+}
+
+/**
+ * Yapı görseli mi? (road_black, settlement_red, city_blue ...)
+ * "icon_longest_road" gibi rozetler ve "generated_tile_*" araziler elenir.
+ */
+export function imageToBuilding(raw) {
+  const name = normalizeImageName(raw);
+  if (!name) return null;
+  if (NON_CARD_PREFIXES.some((p) => p !== 'road' && p !== 'settlement' && p !== 'city' && name.startsWith(p))) {
+    return null;
+  }
+  for (const item of ['settlement', 'city', 'road']) {
+    if (name.startsWith(item)) return item;
+  }
+  return null;
 }

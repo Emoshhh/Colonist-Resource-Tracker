@@ -2,9 +2,20 @@
  * Canlı panel. Oyunun üstünde sabit duran, sürüklenebilir bir tablo.
  */
 
-import { RESOURCES, RES_LABEL, RES_COLOR, DEFAULT_CARD_ICONS } from '../core/resources.js';
+import {
+  RESOURCES,
+  RES_LABEL,
+  RES_COLOR,
+  DEFAULT_CARD_ICONS,
+  PIECE_SUPPLY,
+  PIECE_LABEL,
+  PIECE_SHORT,
+  PIECE_COLOR,
+} from '../core/resources.js';
 
 const STORAGE_KEY = 'colonist-tracker-ui';
+
+const PIECES = ['road', 'settlement', 'city'];
 
 const SIZES = ['s', 'm', 'l'];
 const SIZE_LABEL = { s: 'küçük', m: 'normal', l: 'büyük' };
@@ -307,6 +318,30 @@ export class Overlay {
     return img;
   }
 
+  /**
+   * Yapı başlığı: log'da görülen oyun görseli (road_black vb.), yoksa harf rozeti.
+   * Görseller oyuncu rengine göre değiştiği için ilk görülen kullanılır.
+   */
+  _buildingIcon(item) {
+    const src = this.icons[item];
+    const chip = () => {
+      const node = el('span', 'ct-chip', PIECE_SHORT[item]);
+      node.style.background = PIECE_COLOR[item];
+      node.title = PIECE_LABEL[item];
+      return node;
+    };
+    if (!src) return chip();
+    const img = el('img', 'ct-icon');
+    img.src = src;
+    img.alt = PIECE_LABEL[item];
+    img.title = PIECE_LABEL[item];
+    img.addEventListener('error', () => {
+      const parent = img.parentNode;
+      if (parent) parent.replaceChild(chip(), img);
+    });
+    return img;
+  }
+
   _renderTable(report) {
     const table = this.table;
     table.textContent = '';
@@ -346,6 +381,14 @@ export class Overlay {
       devTh.title = 'Gelişim kartı';
     }
     head.appendChild(devTh);
+
+    PIECES.forEach((item) => {
+      const th = el('th', 'ct-th ct-piece-th');
+      th.appendChild(this._buildingIcon(item));
+      th.title = `${PIECE_LABEL[item]}: kalan taş (başlangıç ${PIECE_SUPPLY[item]})`;
+      head.appendChild(th);
+    });
+
     table.appendChild(head);
 
     this.mismatches = 0;
@@ -353,7 +396,7 @@ export class Overlay {
     if (!report.players.length) {
       const tr = el('tr', 'ct-row');
       const td = el('td', 'ct-td ct-empty');
-      td.colSpan = 9;
+      td.colSpan = 12;
       td.textContent =
         this.status === 'connected'
           ? 'Log’a bağlandı, ilk hamle bekleniyor…'
@@ -424,6 +467,18 @@ export class Overlay {
       }
       tr.appendChild(dev);
 
+      const left = player.pieces || PIECE_SUPPLY;
+      PIECES.forEach((item) => {
+        const n = left[item] ?? PIECE_SUPPLY[item];
+        const td = el('td', 'ct-td ct-piece', String(n));
+        if (!n) td.classList.add('ct-piece-out');
+        else if (n <= 2) td.classList.add('ct-piece-low');
+        td.title =
+          `${PIECE_LABEL[item]}: ${n} taş kaldı (başlangıç ${PIECE_SUPPLY[item]})` +
+          (item === 'settlement' ? '\nŞehir kurulunca köy taşı geri döner.' : '');
+        tr.appendChild(td);
+      });
+
       table.appendChild(tr);
     });
 
@@ -448,7 +503,9 @@ export class Overlay {
       const bar = el('div', 'ct-bar');
       bar.style.height = `${max ? (count / max) * 34 * scale : 0}px`;
       bar.title = `${n}: ${count} kez`;
-      col.append(bar, el('div', 'ct-bar-label', String(n)));
+      const countLabel = el('div', 'ct-bar-count', String(count));
+      if (!count) countLabel.classList.add('ct-zero');
+      col.append(countLabel, bar, el('div', 'ct-bar-label', String(n)));
       bars.appendChild(col);
     }
     box.appendChild(bars);

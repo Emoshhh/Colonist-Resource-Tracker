@@ -179,6 +179,8 @@ export class Game {
       // ikisi de aynı kuralla işlenir: kurulumda ve yol yapımı kartında bedava.
       case 'build':
       case 'place': {
+        // Taş her hâlükârda harcanır: kurulumda ve yol yapımı kartında da.
+        t.placePiece(ev.player, ev.item);
         if (this.setupPhase) break;
         if (ev.item === 'road' && this.freeRoads > 0) {
           this.freeRoads -= 1;
