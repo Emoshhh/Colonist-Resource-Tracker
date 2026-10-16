@@ -63,6 +63,31 @@ satırları sayılarak tutulur.
 Bu sayı oyunun kendi panelinde yazmadığı için çapraz doğrulaması yok: bir inşa satırı
 kaçarsa taş sayısı olduğundan yüksek kalır (⟲ ile sıfırlanır).
 
+## Kazanma tehdidi uyarısı
+
+Colonist rakiplerin **gizli zafer puanı kartlarını açık puana katmıyor** (kendi
+satırında katıyor). Yani bir rakibin gerçek puanı, panelde yazandan elindeki
+oynanmamış gelişim kartı kadar fazla olabilir — her biri zafer puanı kartı
+çıkabilir, destede toplam 5 tane var.
+
+Panel bunu hesaplıyor: **açık puan + en fazla gizli puan**. Sonuç 10'a ulaşırsa
+oyuncunun adı kırmızı yanar ve üstte `⚠ X BU TUR KAZANABİLİR` yazar; 2 puan ya da
+daha az kalmışsa ad sarı olur. Adın üstüne gelince hesabın dökümü görünür.
+
+Alt satırda ayrıca **destede kaç gelişim kartı kaldığı**, oynanmış şövalye sayısı
+ve en büyük ordu / en uzun yol yarışının durumu yazar. Destedeki şövalye sayısı
+aralık olarak verilir: ellerde duran kartların kaçının şövalye olduğu bilinmiyor.
+
+## Yapı sayımının doğrulanması
+
+Açık zafer puanı = köy + 2×şehir + 2 (en uzun yol) + 2 (en büyük ordu). Panelde
+yazan puandan yapıların getirdiğini çıkarınca geriye yalnız ödüller kalmalı:
+**0, 2 ya da 4**. Başka bir şey çıkıyorsa bir inşa satırı kaçmış demektir; o
+oyuncunun köy/şehir hücresinin altı kırmızı dalgalı çizilir ve uyarı çıkar.
+
+Böylece taş sayımının da çapraz doğrulaması oldu — kart sayımındaki panel
+eşitlemesinin yapı tarafındaki karşılığı.
+
 ## İki kaynak: log + oyunun kendi paneli
 
 Log tek kaynak değil. Colonist'in oyuncu panelinde herkesin **toplam kart** ve
@@ -76,6 +101,8 @@ Log tek kaynak değil. Colonist'in oyuncu panelinde herkesin **toplam kart** ve
 | Kartın **türü** (odun mu taş mı) | ✅ yazıyor | ❌ hiç söylemez |
 | Kartın **sayısı** | hesapla çıkarılır | ✅ doğrudan yazıyor |
 | Kim "sen"sin | tahmin gerekir | ✅ `currentUser` |
+| Zafer puanı | yalnız açık olanlar çıkarılabilir | ✅ doğrudan yazıyor |
+| Oynanmış şövalye / yol uzunluğu | sayılabilir | ✅ rozetlerde yazıyor |
 
 Sayılar tutuyorsa hiçbir şey görünmez — sessiz doğrulama. Tutmuyorsa fark
 **kapatılır** (aşağıya bak) ve panelde `⚠ N sayı oyun panelinden düzeltildi` yazar.
@@ -147,6 +174,8 @@ Başlık çubuğundan sürükleyerek taşıyabilirsin; konum ve durum `localStor
 | `N sayı oyun paneliyle uyuşmuyor` | Fark henüz taze; birkaç saniye içinde ya kendiliğinden kapanır ya da düzeltilir. |
 | `N satır okunamadı` | Sanal kaydırıcı yüzünden satır kaçtı (aşağıya bak). |
 | `N log satırı hesapla çelişti` | Bir hamle mevcut duruma göre imkânsızdı. Motor durumu bozmaz, son geçerli hâlini korur. |
+| `X BU TUR KAZANABİLİR` | Açık puanı + elindeki gelişim kartlarının hepsi zafer puanı olsa 10'a ulaşıyor. Hata değil, uyarı. |
+| `yapı sayımı zafer puanıyla tutmuyor` | Köy/şehir sayımı panelin zafer puanıyla çelişiyor; bir inşa satırı kaçmış olabilir. |
 | `olasılık ağacı kırpıldı` | Çok fazla belirsiz çalma birikti, olasılık ağacı sınıra dayandı. Toplamlar hâlâ doğru ama kaynak alt/üst sınırları artık garanti değil. ⟲ ile temizlenir. |
 | `N satır tanınmadı` | Metin kalıbı eşleşmedi — ⧉ ile döküm al. |
 | `N "sen" satırı işlenemedi` | Kendi adın çözülemedi; panelde adına tıkla. |
@@ -222,6 +251,7 @@ extension/
       parser.js           log satırı -> olay  (saf fonksiyon)
       tracker.js          olasılıklı el takibi (saf fonksiyon)
       game.js             olay -> durum uygulaması, panel eşitleme, zar istatistiği
+      insights.js         panel + sayım -> kazanma tehdidi, deste, ödül yarışı
     dom/
       log-reader.js       colonist DOM'u -> parser girdisi
       player-panel.js     oyunun kendi oyuncu paneli -> doğrulama sayıları

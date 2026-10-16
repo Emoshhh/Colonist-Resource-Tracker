@@ -13,6 +13,7 @@ import {
   PIECE_SHORT,
   PIECE_COLOR,
 } from '../core/resources.js';
+import { winThreat, pieceCheck, deckState, awardRace } from '../core/insights.js';
 
 const STORAGE_KEY = 'colonist-tracker-ui';
 
@@ -263,6 +264,13 @@ export class Overlay {
     this._renderRolls(report);
 
     const problems = [];
+    // Kazanma tehdidi bir "hata" değil ama en acil bilgi: başa konuyor.
+    if (this.threats && this.threats.length) {
+      problems.push(`${this.threats.join(', ')} BU TUR KAZANABİLİR`);
+    }
+    if (this.pieceDoubts && this.pieceDoubts.length && !report.missed) {
+      problems.push(`${this.pieceDoubts.join(', ')} yapı sayımı zafer puanıyla tutmuyor`);
+    }
     if (this.mismatches) {
       problems.push(`${this.mismatches} sayı oyun paneliyle uyuşmuyor`);
     }
@@ -283,7 +291,19 @@ export class Overlay {
 
     const certainty = report.worlds === 1 ? 'kesin' : `${report.worlds} olası dağılım`;
     const setup = report.setupPhase ? ' · kurulum' : '';
-    this.footer.textContent = `${certainty}${setup}`;
+
+    const deck = deckState(report, this.panelRows);
+    const race = awardRace(this.panelRows);
+    const bits = [`deste ${deck.left}/${deck.total}`];
+    if (race.army) bits.push(`ordu ${race.army.name} (${race.army.count})`);
+    if (race.road) bits.push(`yol ${race.road.name} (${race.road.count})`);
+
+    this.footer.textContent = `${bits.join(' · ')} — ${certainty}${setup}`;
+    this.footer.title =
+      `Destede ${deck.left} gelişim kartı kaldı (${deck.bought} çekildi).\n` +
+      `Oynanmış şövalye: ${deck.knightsPlayed}. Destede kalan şövalye: ` +
+      `${deck.knightsMin}-${deck.knightsMax} arası.\n` +
+      'En büyük ordu 3, en uzun yol 5 ile kazanılır.';
 
     // Birden fazla insan oyuncu varsa "you" satırları için seçim gerekir.
     if (!this.me && this.ambiguous && report.players.length) {
@@ -408,11 +428,29 @@ export class Overlay {
     }
 
     let mismatches = 0;
+    const threats = [];
+    const pieceDoubts = [];
     report.players.forEach((player) => {
       const tr = el('tr', 'ct-row');
       const name = el('td', 'ct-td ct-name', player.name);
       if (player.name === this.me) name.classList.add('ct-me');
-      name.title = `${player.name}\n(tıkla: "ben buyum" olarak işaretle)`;
+
+      // Kazanma tehdidi: açık puan + elindeki gizli zafer puanı kartı ihtimali.
+      const threat = winThreat(player, this._panelFor(player.name));
+      if (threat) {
+        if (threat.canWin) {
+          name.classList.add('ct-threat');
+          threats.push(player.name);
+        } else if (threat.away <= 2) {
+          name.classList.add('ct-threat-near');
+        }
+        name.title =
+          `${player.name}\nzafer puanı: ${threat.publicVP} açık` +
+          (threat.hidden ? ` + en fazla ${threat.hidden} gizli = ${threat.maxVP}` : '') +
+          (threat.canWin ? '\n⚠ BU TUR KAZANABİLİR' : `\nkazanmaya ${threat.away} puan`) +
+          '\n(tıkla: "ben buyum" olarak işaretle)';
+      }
+      if (!name.title) name.title = `${player.name}\n(tıkla: "ben buyum" olarak işaretle)`;
       name.addEventListener('click', () => this.onPickMe(player.name));
       tr.appendChild(name);
 
@@ -469,11 +507,15 @@ export class Overlay {
       tr.appendChild(dev);
 
       const left = player.pieces || PIECE_SUPPLY;
+      // Zafer puanından köy/şehir sayısı geri çözülüp taş sayacıyla karşılaştırılır.
+      const pc = pieceCheck(player, this._panelFor(player.name));
+      if (pc && !pc.ok) pieceDoubts.push(player.name);
       PIECES.forEach((item) => {
         const n = left[item] ?? PIECE_SUPPLY[item];
         const td = el('td', 'ct-td ct-piece', String(n));
         if (!n) td.classList.add('ct-piece-out');
         else if (n <= 2) td.classList.add('ct-piece-low');
+        if (pc && !pc.ok && item !== 'road') td.classList.add('ct-piece-doubt');
         td.title =
           `${PIECE_LABEL[item]}: ${n} taş kaldı (başlangıç ${PIECE_SUPPLY[item]})` +
           (item === 'settlement' ? '\nŞehir kurulunca köy taşı geri döner.' : '');
@@ -484,6 +526,8 @@ export class Overlay {
     });
 
     this.mismatches = mismatches;
+    this.threats = threats;
+    this.pieceDoubts = pieceDoubts;
   }
 
   _renderRolls(report) {

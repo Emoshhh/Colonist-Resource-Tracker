@@ -46,6 +46,7 @@ export class Tracker {
     this.players = [];
     this.devCards = new Map(); // oyuncu -> elindeki (oynanmamış) gelişim kartı sayısı
     this.pieces = new Map(); // oyuncu -> kalan yapı taşları { road, settlement, city }
+    this.knightsPlayed = new Map(); // oyuncu -> oynanmış şövalye (en büyük ordu yarışı)
     this.worlds = new Map();
     this.desyncs = [];
     this.history = [];
@@ -66,6 +67,7 @@ export class Tracker {
     this.players.push(name);
     this.devCards.set(name, 0);
     this.pieces.set(name, { ...PIECE_SUPPLY });
+    this.knightsPlayed.set(name, 0);
     const next = new Map();
     for (const [key, w] of this.worlds) {
       const hands = decode(key, this.players.length - 1);
@@ -325,9 +327,12 @@ export class Tracker {
     this.devCards.set(player, (this.devCards.get(player) || 0) + 1);
   }
 
-  devCardPlayed(player) {
+  devCardPlayed(player, card = null) {
     this.idx(player);
     this.devCards.set(player, Math.max(0, (this.devCards.get(player) || 0) - 1));
+    if (card === 'knight') {
+      this.knightsPlayed.set(player, (this.knightsPlayed.get(player) || 0) + 1);
+    }
   }
 
   // ------------------------------------------------------------------- rapor
@@ -391,6 +396,7 @@ export class Tracker {
         res,
         devCards: this.devCards.get(name) || 0,
         pieces: { ...(this.pieces.get(name) || PIECE_SUPPLY) },
+        knightsPlayed: this.knightsPlayed.get(name) || 0,
         totalMin: Number.isFinite(totalMin) ? totalMin : 0,
         totalMax: total,
         known,

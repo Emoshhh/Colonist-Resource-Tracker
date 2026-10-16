@@ -3,6 +3,7 @@
  */
 
 import { Game } from './core/game.js';
+import { winThreat, pieceCheck, deckState, awardRace } from './core/insights.js';
 import { parseMessage, playersIn, avatarOf } from './core/parser.js';
 import { LogWatcher, findOwnUsername } from './dom/log-reader.js';
 import { readPlayerPanel } from './dom/player-panel.js';
@@ -166,6 +167,35 @@ function debugSummary() {
         `zar ${c.atRoll ?? '?'} · ${c.player} · ${what} ${c.from} -> ${c.to} (${dir}${Math.abs(c.to - c.from)})`,
       );
     }
+  }
+
+  const deck = deckState(rep, panelRows);
+  const race = awardRace(panelRows);
+  lines.push(
+    '',
+    '--- deste / ödüller ---',
+    `gelişim kartı: ${deck.left}/${deck.total} kaldı (${deck.bought} çekildi)`,
+    `oynanmış şövalye: ${deck.knightsPlayed} · destede kalan şövalye: ` +
+      `${deck.knightsMin}-${deck.knightsMax}`,
+    `en büyük ordu: ${race.army ? `${race.army.name} (${race.army.count})` : 'yok'} · ` +
+      `en uzun yol: ${race.road ? `${race.road.name} (${race.road.count})` : 'yok'}`,
+  );
+
+  lines.push('', '--- zafer puanı / kazanma tehdidi ---');
+  for (const p of rep.players) {
+    const row = panelRows.find((r) => r.name === p.name);
+    const t = winThreat(p, row);
+    const pc = pieceCheck(p, row);
+    if (!t) {
+      lines.push(`${p.name}: (panel puanı okunamadı)`);
+      continue;
+    }
+    lines.push(
+      `${p.name}: açık ${t.publicVP}` +
+        (t.hidden ? ` + gizli ≤${t.hidden} = ${t.maxVP}` : '') +
+        (t.canWin ? '  ⚠ BU TUR KAZANABİLİR' : `  (kazanmaya ${t.away})`) +
+        (pc ? ` · yapı ${pc.settlements} köy + ${pc.cities} şehir${pc.ok ? ' ✓' : ` ✗ fark ${pc.unexplained}`}` : ''),
+    );
   }
 
   lines.push('', '--- hesaplanan eller (kesin alt sınır + bilinmeyen) ---');

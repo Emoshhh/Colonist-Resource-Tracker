@@ -85,5 +85,37 @@ test('sayı rozeti yoksa null döner, satır yine de okunur', () => {
   );
   const wrapper = parseHtml(`<div class="gamePlayerInformationContainer-ZZ">${row.outerHTML}</div>`);
   const rows = readPlayerRows(wrapper);
-  assert.deepEqual(rows, [{ name: 'Zed', cards: null, devCards: null, isMe: false }]);
+  assert.deepEqual(rows, [
+    {
+      name: 'Zed',
+      cards: null,
+      devCards: null,
+      vp: null,
+      knights: null,
+      roadLength: null,
+      isMe: false,
+    },
+  ]);
+});
+
+// Oyunun paneli kart sayısından fazlasını yazıyor: zafer puanı ve başarım
+// rozetleri (oynanmış şövalye, en uzun yol). Kazanma uyarısı ve taş sayımı
+// doğrulaması bunlara dayandığı için gerçek HTML'de kilitleniyor.
+test('zafer puanı ve başarım rozetleri okunur', () => {
+  const rows = readPlayerRows(panel());
+  assert.deepEqual(
+    rows.map((r) => [r.name, r.vp, r.knights, r.roadLength]),
+    [
+      ['Carie49985693', 3, 0, 2],
+      ['Emosh', 3, 0, 2],
+    ],
+  );
+});
+
+test('zafer puanı kapsayıcıdan değil sayının durduğu span\'den okunur', () => {
+  // Kapsayıcının sınıfı "victoryPointsContainer-..."; yanlış eşleşirse
+  // ribbon görselinin metni de sayıya karışabilirdi.
+  const [rival] = readPlayerRows(panel());
+  assert.equal(rival.vp, 3);
+  assert.notEqual(rival.vp, rival.cards);
 });

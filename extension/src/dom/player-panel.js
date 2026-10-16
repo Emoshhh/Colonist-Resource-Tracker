@@ -55,6 +55,33 @@ function firstNumber(text) {
   return m ? Number(m[0]) : null;
 }
 
+/**
+ * Başarım rozetleri: en büyük ordu (oynanmış şövalye) ve en uzun yol (uzunluk).
+ * Hangisinin hangisi olduğu rozetin ikonundan anlaşılır; sayı yanındaki
+ * achievementCount kutusunda durur.
+ *
+ *   <div class="... achievementItem-frxefOzP">
+ *     <img class="icon-..." src=".../icon_largest_army.<hash>.svg">
+ *     <div class="achievementCount-...">0</div>
+ */
+function readAchievements(row) {
+  const items = [];
+  collect(row, hasClass(/achievementItem/i), items);
+
+  let knights = null;
+  let roadLength = null;
+  for (const item of items) {
+    const img = find(item, (el) => el.tagName === 'IMG');
+    const src = img && img.getAttribute ? img.getAttribute('src') || '' : '';
+    const countEl = find(item, hasClass(/achievementCount/i));
+    const n = countEl ? firstNumber(countEl.textContent) : null;
+    if (n === null) continue;
+    if (/largest_army|army/i.test(src)) knights = n;
+    else if (/longest_road|road/i.test(src)) roadLength = n;
+  }
+  return { knights, roadLength };
+}
+
 /** Bir oyuncu satırını oku. */
 function readRow(row) {
   const nameEl = find(row, hasClass(/username/i));
@@ -64,10 +91,16 @@ function readRow(row) {
   const resEl = find(row, hasAttr('data-resource-card'));
   const devEl = find(row, hasAttr('data-development-card'));
 
+  // Dikkat: kapsayıcının sınıfı "victoryPointsContainer-..." — araya tire
+  // girmediği için /victoryPoints-/ yalnız sayının durduğu span'i yakalar.
+  const vpEl = find(row, hasClass(/victoryPoints-/));
+
   return {
     name,
     cards: resEl ? firstNumber(resEl.textContent) : null,
     devCards: devEl ? firstNumber(devEl.textContent) : null,
+    vp: vpEl ? firstNumber(vpEl.textContent) : null,
+    ...readAchievements(row),
     isMe: !!find(row, hasClass(/currentUser/i)),
   };
 }

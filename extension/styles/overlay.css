@@ -188,6 +188,26 @@
   font-weight: 400;
 }
 
+/* bu tur kazanabilecek oyuncu */
+#colonist-tracker .ct-threat {
+  color: #ff6b5a;
+  font-weight: 700;
+  background: rgba(255, 90, 70, 0.2);
+  border-radius: 4px;
+}
+
+/* kazanmaya 2 puan ya da daha az kalmış */
+#colonist-tracker .ct-threat-near {
+  color: #ffd88a;
+  font-weight: 600;
+}
+
+/* zafer puanıyla tutmayan yapı sayısı */
+#colonist-tracker .ct-piece-doubt {
+  text-decoration: underline wavy #ff8b7a;
+  text-underline-offset: 3px;
+}
+
 /* kalan yapı taşları: yol / köy / şehir */
 #colonist-tracker .ct-piece {
   color: #9fb3c8;
