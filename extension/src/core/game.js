@@ -19,7 +19,6 @@ export class Game {
     this.unresolvedYou = 0;
     this.lastEvent = null;
     this.corrections = [];
-    this.devBought = 0; // desteden çekilen toplam gelişim kartı
   }
 
   /**
@@ -177,13 +176,12 @@ export class Game {
         if (ev.item === 'devcard') {
           t.lose(ev.player, toVector(COSTS.devcard));
           t.devCardBought(ev.player);
-          this.devBought += 1;
         }
         break;
 
       case 'playDev':
         if (ev.card === 'roadbuilding') this.freeRoads += 2;
-        t.devCardPlayed(ev.player, ev.card);
+        t.devCardPlayed(ev.player);
         break;
 
       // Colonist hem "built a City" hem "placed a Road" yazabiliyor;
@@ -231,7 +229,6 @@ export class Game {
     rep.unresolvedYou = this.unresolvedYou;
     rep.corrections = this.corrections.length;
     rep.pruned = this.tracker.pruned;
-    rep.devBought = this.devBought;
     return rep;
   }
 }
