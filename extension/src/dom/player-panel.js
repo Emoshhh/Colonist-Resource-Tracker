@@ -72,11 +72,23 @@ function readRow(row) {
   };
 }
 
+/**
+ * Oyuncu satırı mı?
+ *
+ * Eskiden her satırda "playerRow-<hash>" sınıfı vardı ve ona bakıyorduk.
+ * Colonist bunu değiştirdi: rakip satırında "opponentPlayerRow-..." duruyor
+ * ama KENDİ satırında yalnız "container-<hash>" kaldı, yani sınıfa bakan
+ * seçici kendi satırımızı bulamaz oldu (ve "ben kimim" elle seçilir hâle geldi).
+ * İki satırda da duran şey data-player-color: hash içermiyor, anlamlı, ve
+ * oyuncu rengini zaten taşıyor. Sınıf kontrolü eski sürümler için duruyor.
+ */
+const isPlayerRow = (el) => hasAttr('data-player-color')(el) || hasClass(/playerRow/i)(el);
+
 /** Panel elemanından oyuncu satırlarını çıkar (DOM API'si gerektirmez, testlenebilir). */
 export function readPlayerRows(panelEl) {
   if (!panelEl) return [];
   const rows = [];
-  collect(panelEl, hasClass(/playerRow/i), rows);
+  collect(panelEl, isPlayerRow, rows);
   return rows.map(readRow).filter(Boolean);
 }
 

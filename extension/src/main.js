@@ -177,6 +177,24 @@ function debugSummary() {
     }
   }
 
+  // Kim hangi zarı attı. Oyunun kendi istatistik ekranı yalnız toplam
+  // dağılımı gösteriyor, oyuncu kırılımı hiçbir yerde yok.
+  if (rep.rollsByPlayer && rep.rollsByPlayer.size) {
+    lines.push('', '--- zar dağılımı (kim ne attı) ---');
+    const nums = [];
+    for (let n = 2; n <= 12; n += 1) nums.push(String(n).padStart(3));
+    lines.push('oyuncu'.padEnd(16) + nums.join('') + '  top.');
+    for (const [name, arr] of rep.rollsByPlayer) {
+      const total = arr.reduce((a, b) => a + b, 0);
+      const cells = [];
+      for (let n = 2; n <= 12; n += 1) cells.push(String(arr[n]).padStart(3));
+      lines.push(name.slice(0, 15).padEnd(16) + cells.join('') + String(total).padStart(6));
+    }
+    const all = [];
+    for (let n = 2; n <= 12; n += 1) all.push(String(rep.rolls[n]).padStart(3));
+    lines.push('TOPLAM'.padEnd(16) + all.join('') + String(rep.rollCount).padStart(6));
+  }
+
   lines.push('', '--- hesaplanan eller (kesin alt sınır + bilinmeyen) ---');
   for (const p of rep.players) {
     const cells = p.res.map((c) => `${c.res[0].toUpperCase()}${c.min}${c.certain ? '' : '+'}`).join(' ');

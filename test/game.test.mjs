@@ -176,3 +176,45 @@ test('applyEvent çelişki olup olmadığını döndürür', () => {
   assert.equal(g.applyEvent({ kind: 'build', player: 'A', item: 'road' }), false, 'kaynağı vardı');
   assert.equal(g.applyEvent({ kind: 'build', player: 'A', item: 'road' }), true, 'artık yok');
 });
+
+/* --------------------------------------------------------- oyuncu bazlı zar
+ * Oyunun kendi istatistik ekranı yalnız TOPLAM dağılımı gösteriyor; kimin
+ * hangi zarı attığı hiçbir yerde yok. Log satırı atanı yazdığı için
+ * tutulabiliyor — ama tutulmazsa geriye dönük çıkarmanın yolu da yok.
+ */
+
+test('zarlar oyuncu bazında da sayılır', () => {
+  const g = new Game();
+  for (const [p, t] of [['A', 7], ['A', 7], ['B', 5], ['A', 3], ['B', 7]]) {
+    g.applyEvent({ kind: 'roll', player: p, total: t, dice: [] });
+  }
+  const rep = g.report();
+
+  assert.equal(rep.rollCount, 5);
+  assert.equal(rep.rolls[7], 3, 'toplam 7 sayısı');
+  assert.equal(rep.rollsByPlayer.get('A')[7], 2);
+  assert.equal(rep.rollsByPlayer.get('B')[7], 1);
+  assert.equal(rep.rollsByPlayer.get('A')[3], 1);
+  assert.equal(rep.rollsByPlayer.get('B')[5], 1);
+});
+
+test('oyuncu kırılımının toplamı genel dağılıma eşittir', () => {
+  const g = new Game();
+  const rolls = [['A', 6], ['B', 8], ['A', 8], ['B', 2], ['A', 12], ['B', 6]];
+  for (const [p, t] of rolls) g.applyEvent({ kind: 'roll', player: p, total: t, dice: [] });
+
+  const rep = g.report();
+  for (let n = 2; n <= 12; n += 1) {
+    let sum = 0;
+    for (const arr of rep.rollsByPlayer.values()) sum += arr[n];
+    assert.equal(sum, rep.rolls[n], `${n} için kırılım toplamı tutmalı`);
+  }
+});
+
+test('atan bilinmiyorsa genel sayıma girer, kırılıma girmez', () => {
+  const g = new Game();
+  g.applyEvent({ kind: 'roll', player: null, total: 9, dice: [] });
+  const rep = g.report();
+  assert.equal(rep.rolls[9], 1);
+  assert.equal(rep.rollsByPlayer.size, 0);
+});

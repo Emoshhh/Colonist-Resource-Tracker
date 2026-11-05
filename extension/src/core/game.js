@@ -13,6 +13,9 @@ export class Game {
     this.setupPhase = true;
     this.freeRoads = 0;
     this.rolls = new Array(13).fill(0);
+    // Kim hangi zarı attı: oyunun kendi istatistiklerinde bile yok, yalnız
+    // toplam dağılım var. Log satırı atanı yazdığı için biz tutabiliyoruz.
+    this.rollsByPlayer = new Map();
     this.rollCount = 0;
     this.unknownMessages = [];
     this.missed = 0;
@@ -133,6 +136,14 @@ export class Game {
         if (ev.total >= 2 && ev.total <= 12) {
           this.rolls[ev.total] += 1;
           this.rollCount += 1;
+          if (ev.player) {
+            let own = this.rollsByPlayer.get(ev.player);
+            if (!own) {
+              own = new Array(13).fill(0);
+              this.rollsByPlayer.set(ev.player, own);
+            }
+            own[ev.total] += 1;
+          }
         }
         break;
 
@@ -222,6 +233,7 @@ export class Game {
   report() {
     const rep = this.tracker.report();
     rep.rolls = this.rolls;
+    rep.rollsByPlayer = this.rollsByPlayer;
     rep.rollCount = this.rollCount;
     rep.setupPhase = this.setupPhase;
     rep.unknownCount = this.unknownMessages.length;

@@ -87,3 +87,42 @@ test('sayı rozeti yoksa null döner, satır yine de okunur', () => {
   const rows = readPlayerRows(wrapper);
   assert.deepEqual(rows, [{ name: 'Zed', cards: null, devCards: null, isMe: false }]);
 });
+
+/* ------------------------------------------------- colonist işaretlemeyi değiştirdi
+ * Eskiden her satırda "playerRow-<hash>" sınıfı vardı. Yeni sürümde rakip
+ * satırında "opponentPlayerRow-..." duruyor ama KENDİ satırımızda yalnız
+ * "container-<hash>" kaldı. Sınıfa bakan seçici kendi satırımızı bulamıyordu:
+ * "ben kimim" elle seçilmek zorunda kalıyor ve kendi sayımımız hiç
+ * doğrulanmıyordu. Artık iki satırda da duran data-player-color kullanılıyor.
+ */
+const PANEL_V2 = readFileSync(
+  fileURLToPath(new URL('./fixtures/player-panel-v2.html', import.meta.url)),
+  'utf8',
+);
+const panelV2 = () => parseHtml(PANEL_V2);
+
+test('yeni işaretlemede kendi satırımız da okunur', () => {
+  const rows = readPlayerRows(panelV2());
+  assert.deepEqual(
+    rows.map((r) => [r.name, r.cards, r.devCards, r.isMe]),
+    [
+      ['Skuashy', 6, 0, false],
+      ['Emosh', 6, 4, true],
+    ],
+  );
+});
+
+test('kendi satırımızda playerRow sınıfı olmasa da bulunur', () => {
+  // Fixture'daki gerçek durum: kendi satırın sınıfı yalnız "container-<hash>".
+  assert.match(PANEL_V2, /class="container-[A-Za-z0-9]+" data-player-color="5"/);
+  assert.ok(
+    readPlayerRows(panelV2()).some((r) => r.isMe),
+    'currentUser satırı bulunmalı',
+  );
+});
+
+test('eski işaretleme de çalışmaya devam eder', () => {
+  const rows = readPlayerRows(panel());
+  assert.equal(rows.length, 2);
+  assert.ok(rows.some((r) => r.isMe));
+});

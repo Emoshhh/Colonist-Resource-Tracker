@@ -134,7 +134,7 @@ senin oyundaki adını bilmesi gerekir.
 | Düğme | İşlev |
 |-------|-------|
 | % | Olasılıklı görünüm: kesin sayı yerine beklenen değer + aralık |
-| 🎲 | Zar istatistiği grafiğini aç/kapat (çubukların üstünde kaç kez geldiği yazar) |
+| 🎲 | Zar istatistiği grafiğini aç/kapat (çubukların üstünde kaç kez geldiği yazar; çubuğun üstüne gelince kimin kaç kez attığı) |
 | ⤢ | Panel boyutu: küçük → normal → büyük (seçim saklanır) |
 | ⟲ | Sayacı sıfırla ve log'u baştan oku |
 | ⧉ | Tanınmayan log satırlarını + ham log'u panoya kopyala |

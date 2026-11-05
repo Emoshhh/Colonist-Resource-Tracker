@@ -481,7 +481,14 @@ export class Overlay {
       const col = el('div', 'ct-bar-col');
       const bar = el('div', 'ct-bar');
       bar.style.height = `${max ? (count / max) * 34 * scale : 0}px`;
-      bar.title = `${n}: ${count} kez`;
+      // İpucunda kim kaç kez attığı da yazsın.
+      const byPlayer = [];
+      if (report.rollsByPlayer) {
+        for (const [name, arr] of report.rollsByPlayer) {
+          if (arr[n]) byPlayer.push(`${name}: ${arr[n]}`);
+        }
+      }
+      bar.title = `${n} geldi: ${count} kez` + (byPlayer.length ? `\n${byPlayer.join('\n')}` : '');
       const countLabel = el('div', 'ct-bar-count', String(count));
       if (!count) countLabel.classList.add('ct-zero');
       col.append(countLabel, bar, el('div', 'ct-bar-label', String(n)));
