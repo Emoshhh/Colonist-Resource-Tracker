@@ -158,11 +158,6 @@
   color: #55606d;
 }
 
-#colonist-tracker .ct-uncertain {
-  color: #ffd88a;
-  border-radius: 4px;
-}
-
 /* kesin sayı gösterilirken "daha fazlası olabilir" işareti */
 #colonist-tracker .ct-maybe {
   text-decoration: underline dotted #c9a15a;
@@ -221,13 +216,6 @@
 #colonist-tracker .ct-btn-on {
   background: rgba(255, 176, 32, 0.25);
   color: #ffd88a;
-}
-
-#colonist-tracker .ct-range {
-  display: block;
-  font-size: calc(8px * var(--ct-scale));
-  line-height: calc(8px * var(--ct-scale));
-  color: #c9a15a;
 }
 
 #colonist-tracker .ct-empty {

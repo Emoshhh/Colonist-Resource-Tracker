@@ -57,6 +57,18 @@ if (manifest) {
   if (!manifest.version) fail('manifest.json içinde version yok');
   if (manifest.manifest_version !== 3) fail('manifest_version 3 olmalı');
 
+  // Servis işçisi maç kaydını diske yazıyor: dosyası ve izni olmadan
+  // kayıt sessizce düşer, bu yüzden ikisi de denetlenir.
+  const sw = manifest.background && manifest.background.service_worker;
+  if (sw) {
+    if (!existsSync(join(EXT, sw))) fail(`manifest.json servis işçisi "${sw}" diyor ama dosya yok`);
+    const perms = manifest.permissions || [];
+    const needsDownloads = readFileSync(join(EXT, sw), 'utf8').includes('chrome.downloads');
+    if (needsDownloads && !perms.includes('downloads')) {
+      fail('servis işçisi chrome.downloads kullanıyor ama "downloads" izni yok');
+    }
+  }
+
   // web_accessible_resources olmadan main.js dinamik import ile yüklenemez
   const war = JSON.stringify(manifest.web_accessible_resources || []);
   if (!war.includes('src/')) fail('web_accessible_resources src/ dosyalarını açmıyor');

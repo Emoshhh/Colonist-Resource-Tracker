@@ -45,13 +45,13 @@ function saveUiState(state) {
 }
 
 export class Overlay {
-  constructor({ onReset, onCopyDebug, onPickMe } = {}) {
+  constructor({ onReset, onCopyDebug, onPickMe, onDumpFullLog } = {}) {
     this.onReset = onReset || (() => {});
     this.onCopyDebug = onCopyDebug || (() => {});
     this.onPickMe = onPickMe || (() => {});
+    this.onDumpFullLog = onDumpFullLog || (() => {});
     this.ui = loadUiState();
     this.showRolls = this.ui.showRolls ?? true;
-    this.showProbabilities = this.ui.showProbabilities ?? false;
     this.size = SIZES.includes(this.ui.size) ? this.ui.size : 'm';
     this.root = null;
     this.me = null;
@@ -100,17 +100,6 @@ export class Overlay {
       saveUiState(this.ui);
       this.rollsBox.style.display = this.showRolls ? '' : 'none';
     };
-    const probBtn = el('button', 'ct-btn', '%');
-    probBtn.title = 'Olasılıklı görünüm: kesin sayı yerine beklenen değer göster';
-    probBtn.onclick = () => {
-      this.showProbabilities = !this.showProbabilities;
-      this.ui.showProbabilities = this.showProbabilities;
-      saveUiState(this.ui);
-      probBtn.classList.toggle('ct-btn-on', this.showProbabilities);
-      if (this.lastReport) this.render(this.lastReport);
-    };
-    probBtn.classList.toggle('ct-btn-on', this.showProbabilities);
-
     const resetBtn = el('button', 'ct-btn', '⟲');
     resetBtn.title = 'Sayacı sıfırla ve log’u baştan oku';
     resetBtn.onclick = () => this.onReset();
@@ -125,7 +114,27 @@ export class Overlay {
     minBtn.title = 'Küçült';
     minBtn.onclick = () => this.toggleCollapse();
 
-    actions.append(probBtn, rollsBtn, sizeBtn, resetBtn, debugBtn, minBtn);
+    const fullLogBtn = el('button', 'ct-btn', '≡');
+    fullLogBtn.title =
+      'Tüm log kaydını al: dosyaya yaz + panoya kopyala\n' +
+      '(log kutusunu baştan sona kaydırır; birkaç saniye sürer)';
+    fullLogBtn.onclick = () => {
+      if (fullLogBtn.disabled) return;
+      fullLogBtn.disabled = true;
+      fullLogBtn.classList.add('ct-btn-on');
+      // Sonucu işleyen taraf kendi bilgi mesajını veriyor; burada yalnız
+      // düğmeyi serbest bırakıyoruz, hata olursa onu gösteriyoruz.
+      const done = () => {
+        fullLogBtn.disabled = false;
+        fullLogBtn.classList.remove('ct-btn-on');
+      };
+      Promise.resolve(this.onDumpFullLog()).then(done, (err) => {
+        done();
+        this.flash(`hata: ${(err && err.message) || err}`);
+      });
+    };
+
+    actions.append(rollsBtn, sizeBtn, resetBtn, debugBtn, fullLogBtn, minBtn);
     header.append(title, actions);
 
     // --- gövde
@@ -185,6 +194,17 @@ export class Overlay {
     if (this.sizeBtn) {
       this.sizeBtn.title = `Panel boyutu: ${SIZE_LABEL[this.size]} (tıkla: sıradaki)`;
     }
+  }
+
+  /** Uyarı satırında birkaç saniyelik bilgi mesajı. */
+  flash(text, ms = 4000) {
+    if (!this.warn) return;
+    this.warn.textContent = text;
+    this.warn.style.display = '';
+    clearTimeout(this._flashTimer);
+    this._flashTimer = setTimeout(() => {
+      if (this.lastReport) this.render(this.lastReport);
+    }, ms);
   }
 
   toggleCollapse(force) {
@@ -408,19 +428,10 @@ export class Overlay {
       tr.appendChild(name);
 
       player.res.forEach((cell) => {
-        const td = el('td', 'ct-td');
-        if (this.showProbabilities && !cell.certain) {
-          // olasılıklı görünüm: beklenen değer + aralık
-          td.classList.add('ct-uncertain');
-          td.textContent = cell.mean.toFixed(1);
-          td.appendChild(el('span', 'ct-range', `${cell.min}-${cell.max}`));
-          td.style.background = `rgba(255, 176, 32, ${0.1 + 0.3 * cell.p})`;
-        } else {
-          // kesin görünüm: garanti alt sınır (fazlası "?" sütununda)
-          td.textContent = String(cell.min);
-          if (cell.min === 0) td.classList.add('ct-zero');
-          if (!cell.certain) td.classList.add('ct-maybe');
-        }
+        // Garanti alt sınır gösterilir; fazlası "?" sütununda toplanır.
+        const td = el('td', 'ct-td', String(cell.min));
+        if (cell.min === 0) td.classList.add('ct-zero');
+        if (!cell.certain) td.classList.add('ct-maybe');
         td.title = cell.certain
           ? `${RES_LABEL[cell.res]}: kesin ${cell.min}`
           : `${RES_LABEL[cell.res]}: kesin ${cell.min}, en fazla ${cell.max}\n` +

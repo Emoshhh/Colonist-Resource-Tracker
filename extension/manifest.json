@@ -2,19 +2,42 @@
   "manifest_version": 3,
   "name": "Colonist Kaynak Takibi",
   "description": "colonist.io oyun log'unu okuyarak rakiplerin elindeki kaynakları canlı takip eder.",
-  "version": "1.2.0",
+  "version": "1.3.0",
+  "permissions": [
+    "downloads",
+    "alarms",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://raw.githubusercontent.com/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js"
+  },
   "content_scripts": [
     {
-      "matches": ["https://colonist.io/*", "https://*.colonist.io/*"],
-      "js": ["src/loader.js"],
-      "css": ["styles/overlay.css"],
+      "matches": [
+        "https://colonist.io/*",
+        "https://*.colonist.io/*"
+      ],
+      "js": [
+        "src/loader.js"
+      ],
+      "css": [
+        "styles/overlay.css"
+      ],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["src/*"],
-      "matches": ["https://colonist.io/*", "https://*.colonist.io/*"]
+      "resources": [
+        "src/*"
+      ],
+      "matches": [
+        "https://colonist.io/*",
+        "https://*.colonist.io/*"
+      ]
     }
   ]
 }

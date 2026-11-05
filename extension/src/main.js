@@ -120,6 +120,29 @@ function meSource() {
 }
 
 /**
+ * Kim hangi zarı attı, düz metin tablo. Oyunun kendi istatistik ekranı yalnız
+ * toplam dağılımı gösteriyor; oyuncu kırılımı hiçbir yerde yok, bu yüzden hem
+ * hata ayıklama dökümüne hem maç sonu kaydına aynı tablo yazılır.
+ */
+function diceTableLines(rep) {
+  if (!rep.rollsByPlayer || !rep.rollsByPlayer.size) return [];
+  const lines = ['', '--- zar dağılımı (kim ne attı) ---'];
+  const nums = [];
+  for (let n = 2; n <= 12; n += 1) nums.push(String(n).padStart(3));
+  lines.push('oyuncu'.padEnd(16) + nums.join('') + '  top.');
+  for (const [name, arr] of rep.rollsByPlayer) {
+    const total = arr.reduce((a, b) => a + b, 0);
+    const cells = [];
+    for (let n = 2; n <= 12; n += 1) cells.push(String(arr[n]).padStart(3));
+    lines.push(name.slice(0, 15).padEnd(16) + cells.join('') + String(total).padStart(6));
+  }
+  const all = [];
+  for (let n = 2; n <= 12; n += 1) all.push(String(rep.rolls[n]).padStart(3));
+  lines.push('TOPLAM'.padEnd(16) + all.join('') + String(rep.rollCount).padStart(6));
+  return lines;
+}
+
+/**
  * Dökümün başına durum özeti. Ham log tek başına "satır tanındı mı"yı
  * gösteriyor ama "sayım tuttu mu, ben kimim, kaç düzeltme yapıldı"yı
  * göstermiyordu — teşhis için asıl gereken bunlar.
@@ -177,23 +200,7 @@ function debugSummary() {
     }
   }
 
-  // Kim hangi zarı attı. Oyunun kendi istatistik ekranı yalnız toplam
-  // dağılımı gösteriyor, oyuncu kırılımı hiçbir yerde yok.
-  if (rep.rollsByPlayer && rep.rollsByPlayer.size) {
-    lines.push('', '--- zar dağılımı (kim ne attı) ---');
-    const nums = [];
-    for (let n = 2; n <= 12; n += 1) nums.push(String(n).padStart(3));
-    lines.push('oyuncu'.padEnd(16) + nums.join('') + '  top.');
-    for (const [name, arr] of rep.rollsByPlayer) {
-      const total = arr.reduce((a, b) => a + b, 0);
-      const cells = [];
-      for (let n = 2; n <= 12; n += 1) cells.push(String(arr[n]).padStart(3));
-      lines.push(name.slice(0, 15).padEnd(16) + cells.join('') + String(total).padStart(6));
-    }
-    const all = [];
-    for (let n = 2; n <= 12; n += 1) all.push(String(rep.rolls[n]).padStart(3));
-    lines.push('TOPLAM'.padEnd(16) + all.join('') + String(rep.rollCount).padStart(6));
-  }
+  lines.push(...diceTableLines(rep));
 
   lines.push('', '--- hesaplanan eller (kesin alt sınır + bilinmeyen) ---');
   for (const p of rep.players) {
@@ -224,6 +231,115 @@ function panelHtml() {
   }
 }
 
+/* ------------------------------------------------------------------ kayıt */
+
+function stamp(d = new Date()) {
+  const p = (n) => String(n).padStart(2, '0');
+  return (
+    `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` +
+    `_${p(d.getHours())}${p(d.getMinutes())}`
+  );
+}
+
+/** Dosya adı: tarih + oyuncular. Dosya sisteminin sevmediği karakterler atılır. */
+function logFileName() {
+  const who = game.players.join('-vs-').replace(/[^\p{L}\p{N}_-]+/gu, '_').slice(0, 60);
+  return `${stamp()}${who ? '_' + who : ''}.txt`;
+}
+
+/** Taranan satırları, başlık ve zar tablosuyla birlikte kaydedilecek metne çevirir. */
+function fullLogText(scan) {
+  const rep = game.report();
+  const head = [
+    `# colonist maç kaydı — ${new Date().toLocaleString('tr-TR')}`,
+    `# oyuncular: ${game.players.join(', ') || '(bilinmiyor)'}`,
+    `# ben: ${me || '(çözülemedi)'}`,
+    `# satır: ${scan.rows.length}` +
+      (scan.gaps ? ` · log'da ${scan.gaps} satırlık boşluk (kaydırıcı silmiş)` : ''),
+    `# zar: ${rep.rollCount}`,
+  ];
+  if (scan.note) head.push(`# not: ${scan.note}`);
+
+  const body = scan.rows.map((r) =>
+    r.idx >= 0 ? `[${String(r.idx).padStart(4)}] ${r.text}` : `[   ?] ${r.text}`,
+  );
+
+  return [...head, ...diceTableLines(rep), '', '--- log ---', ...body, ''].join('\n');
+}
+
+/**
+ * Dosyayı indirilenlere yazar. İçerik betiği `chrome.downloads`'u doğrudan
+ * kullanamıyor, bu yüzden iş servis işçisine (background.js) yollanır; o da
+ * "colonist-logs" alt klasörüne kaydeder. Uzantı bağlamı yoksa (ör. testte)
+ * eski usul <a download> ile indirilenlerin köküne düşer.
+ */
+function saveLogFile(name, text) {
+  const msg = { type: 'colonist-tracker:save-log', name, text };
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+    return new Promise((resolve, reject) => {
+      try {
+        chrome.runtime.sendMessage(msg, (res) => {
+          const err = chrome.runtime.lastError;
+          if (err) reject(new Error(err.message));
+          else if (res && res.ok) resolve(res);
+          else reject(new Error((res && res.error) || 'kaydedilemedi'));
+        });
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  const a = document.createElement('a');
+  a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(text);
+  a.download = name;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  return Promise.resolve({ ok: true, path: name });
+}
+
+/**
+ * Tüm log'u tara, dosyaya yaz, panoya kopyala.
+ * @param {'button'|'gameover'} how
+ */
+async function dumpFullLog(how = 'button') {
+  const scan = await watcher.collectAllRows();
+  if (!scan.rows.length) {
+    overlay.flash('Log satırı okunamadı.');
+    return null;
+  }
+
+  const text = fullLogText(scan);
+  const name = logFileName();
+  console.log(`[colonist-tracker] maç kaydı (${scan.rows.length} satır)\n` + text);
+
+  let saved = null;
+  try {
+    saved = await saveLogFile(name, text);
+  } catch (err) {
+    console.warn('[colonist-tracker] dosya kaydedilemedi', err);
+  }
+
+  if (how === 'button') {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.warn('[colonist-tracker] panoya kopyalanamadı', err);
+    }
+  }
+
+  const where = saved && saved.path ? saved.path : name;
+  overlay.flash(
+    `${scan.rows.length} satır alındı` +
+      (saved ? ` · kaydedildi: ${where}` : ' · dosya kaydedilemedi (konsolda var)') +
+      (how === 'button' ? ' · panoya kopyalandı' : ''),
+    6000,
+  );
+  return text;
+}
+
 const overlay = new Overlay({
   onReset: () => {
     game = new Game();
@@ -231,6 +347,7 @@ const overlay = new Overlay({
     humanPlayers.clear();
     syncSig = '';
     syncHits = 0;
+    gameOverSaved = false;
     watcher.rescan();
     scheduleRender();
   },
@@ -246,6 +363,7 @@ const overlay = new Overlay({
     overlay.setMe(me, meIsAmbiguous());
     scheduleRender();
   },
+  onDumpFullLog: () => dumpFullLog('button'),
   onCopyDebug: () => {
     const payload = [
       debugSummary(),
@@ -329,6 +447,14 @@ function panelSyncTick() {
   applyPanelSync(rows);
 }
 
+/**
+ * Maç sonu satırı ("… won the game!"). Parser bunu yok sayıyor (olay değil),
+ * ama kaydı tam o anda almak gerekiyor: birkaç saniye sonra yeni maç başlarsa
+ * log sıfırlanır ve maçın istatistiği bir daha hiçbir yerden okunamaz.
+ */
+const GAME_OVER_RE = /\b(won|wins) the game\b/i;
+let gameOverSaved = false;
+
 function handleMessage(parts) {
   msgSeq += 1;
   // Mesajda geçen oyuncuları kaydet (sıra = log'da görülme sırası)
@@ -350,6 +476,21 @@ function handleMessage(parts) {
     forceSync = true;
     setTimeout(panelSyncTick, 400);
   }
+
+  const text = parts
+    .filter((p) => p.t === 'text')
+    .map((p) => p.v)
+    .join(' ');
+  if (!gameOverSaved && GAME_OVER_RE.test(text)) {
+    gameOverSaved = true;
+    // Kazanma satırından sonra birkaç satır daha düşebiliyor; önce otursun.
+    setTimeout(() => {
+      dumpFullLog('gameover').catch((err) =>
+        console.warn('[colonist-tracker] maç sonu kaydı alınamadı', err),
+      );
+    }, 1500);
+  }
+
   scheduleRender();
 }
 
@@ -370,6 +511,7 @@ const watcher = new LogWatcher({
     humanPlayers.clear();
     syncSig = '';
     syncHits = 0;
+    gameOverSaved = false;
     me = resolveMe();
     overlay.setMe(me, meIsAmbiguous());
     scheduleRender();

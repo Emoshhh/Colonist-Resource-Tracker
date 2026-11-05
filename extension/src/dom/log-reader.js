@@ -10,7 +10,17 @@
  *    `data-index` sırasıyla takip edilir; atlanan satırlar da raporlanır.
  */
 
-import { isAvatarImage, avatarKind } from '../core/resources.js';
+import {
+  isAvatarImage,
+  avatarKind,
+  imageToResource,
+  imageToBuilding,
+  isDevCardImage,
+  isHiddenCardImage,
+  normalizeImageName,
+  RES_LABEL,
+  PIECE_LABEL,
+} from '../core/resources.js';
 
 /**
  * Colonist class adlarına build hash'i ekliyor ("virtualScroller-lSkdkGJi"),
@@ -208,6 +218,60 @@ export function elementToParts(el) {
 }
 
 /**
+ * Bir satırı okunur düz metne çevirir: kaynak/yapı resimleri köşeli parantezli
+ * etikete döner. Kayıt dosyasında "Emosh got [Odun] [Buğday]" gibi görünür.
+ */
+export function partsToText(parts) {
+  const out = [];
+  for (const p of parts) {
+    if (p.t === 'text' || p.t === 'player') {
+      out.push(p.v);
+      continue;
+    }
+    if (p.t !== 'img') continue;
+
+    // Zarlar metinde hiç yazmıyor, yalnız resim olarak duruyor: kayıtta
+    // kaybolmaması "kim hangi zarı attı" istatistiğinin tek şartı.
+    const dice = /^dice_(\d+)/.exec(normalizeImageName(p.v) || '');
+    if (dice) {
+      out.push(`[zar ${dice[1]}]`);
+      continue;
+    }
+
+    const res = imageToResource(p.v);
+    if (res) {
+      out.push(`[${RES_LABEL[res] || res}]`);
+      continue;
+    }
+    const piece = imageToBuilding(p.v);
+    if (piece) {
+      out.push(`[${PIECE_LABEL[piece] || piece}]`);
+      continue;
+    }
+    if (isDevCardImage(p.v)) {
+      out.push('[gelişim kartı]');
+      continue;
+    }
+    if (isHiddenCardImage(p.v)) {
+      out.push('[kapalı kart]');
+      continue;
+    }
+    out.push('[?]');
+  }
+  return out.join(' ').replace(/\s+/g, ' ').trim();
+}
+
+/** Satır elemanının okunur metni. */
+export function rowToText(el) {
+  return partsToText(elementToParts(el));
+}
+
+const sleep = (ms) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+/**
  * Log'a eklenen yeni mesajları izler.
  * Yeni oyun başladığında (log kutusu değiştiğinde ya da sıfırlandığında) onReset çağrılır.
  */
@@ -225,6 +289,9 @@ export class LogWatcher {
     this.observer = null;
     this.timer = null;
     this.restartStreak = 0;
+    // Tüm log'u tararken (collectAllRows) kaydırma yüzünden eski satırlar
+    // DOM'a geri geliyor. flush() o sırada çalışmasın: sayıma dokunmamalı.
+    this.scanning = false;
   }
 
   /** Satırların kaydığı asıl kutu (log elemanının kendisi ya da bir atası). */
@@ -372,7 +439,7 @@ export class LogWatcher {
    * yoksa düğüm kimliğiyle çalışılır.
    */
   flush() {
-    if (!this.logEl) return;
+    if (!this.logEl || this.scanning) return;
     const rows = this._rows();
     const indexed = rows.filter((r) => Number.isFinite(r.idx));
 
@@ -396,6 +463,89 @@ export class LogWatcher {
       const parts = elementToParts(el);
       if (hasContent(parts)) this.onMessage(parts, el);
     }
+  }
+
+  /**
+   * Log kutusunu en üstten en alta kaydırarak BÜTÜN satırları toplar.
+   *
+   * Sanal kaydırıcıda aynı anda ~9 satır DOM'da durduğu için maçın tamamını
+   * görmenin tek yolu kaydırmak. Tarama sırasında flush() susturulur: amaç
+   * kayıt almak, sayımı değiştirmek değil. Bitince kaydırma eski yerine döner.
+   *
+   * @returns {Promise<{rows: Array<{idx:number, text:string}>, gaps:number, scrolled:boolean, note?:string}>}
+   */
+  async collectAllRows({ settle = 110, maxSteps = 600 } = {}) {
+    if (!this.logEl) this._ensureLog();
+    if (!this.logEl) return { rows: [], gaps: 0, scrolled: false, note: 'log kutusu bulunamadı' };
+
+    const found = new Map();
+    let unindexed = 0;
+    const grab = () => {
+      for (const { el, idx } of this._rows()) {
+        const text = rowToText(el);
+        if (!text) continue;
+        if (Number.isFinite(idx)) {
+          if (!found.has(idx)) found.set(idx, text);
+        } else {
+          // Sıra numarası yoksa metnin kendisini anahtar yap: tekrarları
+          // ayıklar ama "aynı cümle iki kez geldi"yi de siler. Nadir durum.
+          const key = `t:${text}`;
+          if (!found.has(key)) {
+            found.set(key, text);
+            unindexed += 1;
+          }
+        }
+      }
+    };
+
+    const sc = this._scroller();
+    this.scanning = true;
+    try {
+      grab();
+      if (sc) {
+        const restore = sc.scrollTop;
+        const stride = Math.max(40, Math.floor(sc.clientHeight * 0.75));
+        sc.scrollTop = 0;
+        await sleep(settle * 2);
+
+        for (let step = 0; step < maxSteps; step += 1) {
+          grab();
+          const before = sc.scrollTop;
+          const bottom = sc.scrollHeight - sc.clientHeight;
+          if (before >= bottom - 2) break;
+          sc.scrollTop = Math.min(bottom, before + stride);
+          await sleep(settle);
+          // Kaydırma ilerlemiyorsa sonsuz döngüye girmeyelim.
+          if (sc.scrollTop <= before) break;
+        }
+        grab();
+        sc.scrollTop = restore;
+        await sleep(settle);
+        grab();
+      }
+    } finally {
+      this.scanning = false;
+    }
+
+    const rows = [...found.entries()]
+      .filter(([k]) => typeof k === 'number')
+      .sort((a, b) => a[0] - b[0])
+      .map(([idx, text]) => ({ idx, text }));
+
+    const extra = [...found.entries()]
+      .filter(([k]) => typeof k !== 'number')
+      .map(([, text], i) => ({ idx: -1 - i, text }));
+
+    let gaps = 0;
+    for (let i = 1; i < rows.length; i += 1) gaps += rows[i].idx - rows[i - 1].idx - 1;
+
+    return {
+      rows: [...rows, ...extra],
+      gaps,
+      scrolled: Boolean(sc),
+      note: sc ? undefined : 'kaydırılabilir kutu bulunamadı: yalnız görünen satırlar',
+      unindexed,
+    };
   }
 
   /** Hata ayıklama dökümü: seçilen kutu + görünen satırların ham HTML'i. */

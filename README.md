@@ -7,7 +7,7 @@ sürekli karşılaştırır, böylece kaçan bir log satırı sessizce yanlış 
 
 ```
 ┌──────────────────────────────────────────────┐
-│ ● Kaynak Takibi      % 🎲 ⤢ ⟲ ⧉ –            │
+│ ● Kaynak Takibi      🎲 ⤢ ⟲ ⧉ ≡ –            │
 ├──────────────────────────────────────────────┤
 │         🌲 🧱 🐑 🌾 ⛏  ? │ 🛣 🏠 🏛        │
 │ Ali      1  0  2  1  0  0 │ 13  3  4        │  ← eli tamamen biliniyor
@@ -26,9 +26,6 @@ sürekli karşılaştırır, böylece kaçan bir log satırı sessizce yanlış 
 Kaynak sütunlarında **kesin olarak bildiğimiz** sayı yazar — "en az bu kadar var".
 Çalma yüzünden türü belirsiz kalan kartlar tahmine dağıtılmaz, `?` sütununda toplanır.
 Rakip harcama yaptıkça `?` kendiliğinden erir ve kartlar gerçek sütunlarına geçer.
-
-`%` düğmesiyle olasılıklı görünüme geçebilirsin: orada kesin sayı yerine beklenen
-değer (`1.4`) ve alt–üst sınır (`1-2`) gösterilir.
 
 ## Nasıl çalışır
 
@@ -112,13 +109,56 @@ gerçekten bir şey kaçmış demektir.
 
 ## Kurulum
 
+### Kolay yol: tek seferlik kurulum, sonrası otomatik
+
+Her güncellemede zip indirip klasör seçmek gerekmiyor. Bir kez kuruyorsun,
+sonrasında eklenti kendini güncelliyor.
+
+**Windows:**
+
+1. `kurulum/kur.cmd` dosyasını çift tıkla. Depoyu
+   `%LOCALAPPDATA%\colonist-tracker` klasörüne indirir.
+   (Git yoksa önce `winget install --id Git.Git -e`.)
+2. `chrome://extensions` → **Geliştirici modu** → **Paketlenmemiş öğe yükle**
+   → betiğin yazdığı `...\colonist-tracker\extension` klasörünü seç. **Bu adım
+   bir daha gerekmez**: Chrome artık o klasörü okuyor, klasör güncellendiğinde
+   uzantı da güncellenmiş olur.
+3. `kurulum/otomatik-guncelle.cmd` dosyasını çift tıkla. Saatte bir çalışan bir
+   Görev Zamanlayıcı görevi ekler; o `git pull` yapar, uzantı da yeni sürümü
+   görünce kendini yeniden yükler.
+
+Elle güncellemek istersen: `kurulum/guncelle.cmd`.
+
+**macOS / Linux:** `bash kurulum/kur.sh` — aynı işi yapar, otomatik güncelleme
+için betiğin sonunda yazdığı `crontab` satırını ekle.
+
+### Güncelleme nasıl kendiliğinden oluyor
+
+Paketlenmemiş uzantıyı Chrome kendisi güncellemez (mağaza yok, dosyalar diskte).
+İki parça birleşince otomatik oluyor:
+
+1. Zamanlanmış görev klasörü `git pull` ile tazeler.
+2. Uzantının servis işçisi 3 saatte bir GitHub'daki `manifest.json` sürümüne
+   bakar; diskteki sürümden farklıysa `chrome.runtime.reload()` çağırır —
+   bu da dosyaları **diskten** yeniden okur.
+
+Aynı sürüm için bir kez denenir, yani `git pull` henüz çalışmamışsa sonsuz
+yeniden yükleme döngüsü olmaz.
+
+### Elle kurulum (betik istemiyorsan)
+
 1. Bu depoyu indir.
 2. Chrome / Edge / Brave'de `chrome://extensions` adresini aç.
 3. Sağ üstten **Geliştirici modu**nu aç.
 4. **Paketlenmemiş öğe yükle** deyip `extension/` klasörünü seç.
 5. colonist.io'da bir oyuna gir — panel sağ üstte kendiliğinden açılır.
 
-Firefox için `about:debugging` → "Bu Firefox" → "Geçici Eklenti Yükle" → `extension/manifest.json`.
+Her güncellemede klasörü yeniden indirip `chrome://extensions` sayfasındaki
+yenileme düğmesine basman gerekir.
+
+Firefox için `about:debugging` → "Bu Firefox" → "Geçici Eklenti Yükle" →
+`extension/manifest.json`. (Firefox'ta servis işçisi/alarm davranışı farklı,
+otomatik güncelleme çalışmaz.)
 
 ## "Sen" kimsin?
 
@@ -136,11 +176,11 @@ senin oyundaki adını bilmesi gerekir.
 
 | Düğme | İşlev |
 |-------|-------|
-| % | Olasılıklı görünüm: kesin sayı yerine beklenen değer + aralık |
 | 🎲 | Zar istatistiğini aç/kapat: genel dağılım grafiği + kim hangi zarı attı tablosu |
 | ⤢ | Panel boyutu: küçük → normal → büyük (seçim saklanır) |
 | ⟲ | Sayacı sıfırla ve log'u baştan oku |
 | ⧉ | Tanınmayan log satırlarını + ham log'u panoya kopyala |
+| ≡ | **Tüm maç kaydını al:** log'u baştan sona kaydırıp her satırı dosyaya yazar ve panoya kopyalar |
 | – | Paneli küçült |
 
 Başlık çubuğundan sürükleyerek taşıyabilirsin; konum ve durum `localStorage`'da saklanır.
@@ -154,6 +194,51 @@ Bu kırılım **oyunun hiçbir yerinde yok** — colonist'in oyun sonu istatisti
 ekranındaki "Dice Rolls" bile yalnız toplam dağılımı gösterir. Log satırı zarı
 atanı yazdığı için eklenti tutabiliyor; tutulmazsa geriye dönük çıkarmanın yolu
 yok (log satırları sanal kaydırıcıdan silinir ve arşive yalnız nadir satırlar girer).
+
+## Maç kayıtları
+
+Maç bittiğinde (`... won the game!` satırı) eklenti **log'un tamamını** kendiliğinden
+bir dosyaya yazar. `≡` düğmesiyle istediğin an elle de alabilirsin; o zaman dosyaya
+yazmanın yanında panoya da kopyalanır.
+
+Kayıt yeri: **İndirilenler/colonist-logs/** — ör.
+`2026-11-05_2134_Emosh-vs-Skuashy.txt`. MV3 uzantısı rastgele bir klasöre yazamaz;
+yazabildiği tek yer indirilenler ve onun alt klasörleri. Klasörü başka yere taşımak
+istersen Chrome'un indirme konumunu değiştir.
+
+Dosyanın başında özet (oyuncular, satır sayısı, zar sayısı) ve **kim hangi zarı
+attı tablosu** var; altında satır satır log:
+
+```
+# colonist maç kaydı — 5.11.2026 21:34:07
+# oyuncular: Emosh, Skuashy
+# ben: Emosh
+# satır: 412
+# zar: 76
+
+--- zar dağılımı (kim ne attı) ---
+oyuncu            2  3  4  5  6  7  8  9 10 11 12  top.
+Emosh             1  2  4  5  6  5  4  5  3  2  1    38
+Skuashy           2  1  3  6  5  6  5  4  3  2  1    38
+TOPLAM            3  3  7 11 11 11  9  9  6  4  2    76
+
+--- log ---
+[   0] Emosh placed a [Köy]
+[   1] Emosh placed a [Yol]
+...
+[  34] Skuashy rolled [zar 4] [zar 3]
+[  35] Emosh got [Odun] [Buğday]
+```
+
+Kaynak/yapı/zar resimleri köşeli paranteze çevrilir — colonist bunları metin olarak
+yazmıyor, yalnız resim koyuyor. Zarın kaydedilmesi "kim ne attı" istatistiğinin tek
+şartı, o yüzden sonradan da ayıklanabilsin diye satırda duruyor.
+
+**Nasıl topluyor:** log sanal kaydırıcı, aynı anda ~9 satır DOM'da duruyor. Bu yüzden
+kayıt alınırken kutu baştan sona kaydırılır ve her satır `data-index`'iyle toplanır;
+sonra kaydırma eski yerine döner. Tarama sırasında sayım dondurulur (okunan eski
+satırlar ikinci kez işlenmesin). Kaydırıcının çok eski satırları tamamen sildiği
+durumda başlıkta `log'da N satırlık boşluk` yazar.
 
 ## Panel uyarıları ne demek
 
@@ -233,6 +318,7 @@ extension/
   src/
     loader.js             content script -> modül yükleyici
     main.js               log -> parser -> motor -> panel akışı
+    background.js         servis işçisi: maç kaydını diske yaz + kendini güncelle
     core/
       resources.js        kaynaklar, maliyetler, ikon eşlemeleri
       parser.js           log satırı -> olay  (saf fonksiyon)
@@ -248,6 +334,7 @@ test/                     node:test ile birim + uçtan uca testler
 tools/
   check-extension.mjs     manifest / sözdizimi / import yolu denetimi
   dump-log.js             eklentisiz çalışan konsol döküm betiği
+kurulum/                  tek seferlik kurulum + otomatik güncelleme betikleri
 .github/workflows/        her push'ta test + denetim
 ```
 
