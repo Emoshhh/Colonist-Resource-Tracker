@@ -240,6 +240,27 @@ sonra kaydırma eski yerine döner. Tarama sırasında sayım dondurulur (okunan
 satırlar ikinci kez işlenmesin). Kaydırıcının çok eski satırları tamamen sildiği
 durumda başlıkta `log'da N satırlık boşluk` yazar.
 
+### Kayıtlardan istatistik çıkarmak
+
+```bash
+node tools/analiz.mjs ~/Downloads/colonist-logs          # klasörün tamamı
+node tools/analiz.mjs kayit.txt                          # tek maç
+```
+
+Her maç için şunları yazar:
+
+| Bölüm | Ne gösterir |
+|-------|-------------|
+| **Zar** | Kim hangi sayıyı kaç kez attı + adil zarda kaç gelmeliydi + sapma (ki-kare) |
+| **Kaynak üretimi** | Her oyuncunun zardan aldığı kart, kaynak kaynak, zar başına ortalama |
+| **Haydut ve çalma** | Kim kaç kez haydut oynadı, kimden kaç kart çaldı, kaç kez üretimi engellendi, 7'de kaç kart attı |
+| **Takaslar** | Kaç takas, hangi oranla (4:1 banka mı 2:1 liman mı — hangi limanın olduğu buradan çıkar) |
+| **İnşa / gelişim kartı** | Yol-köy-şehir sayısı, alınan ve kullanılan gelişim kartları |
+| **Zaman çizelgesi** | Kaçıncı zarda ne kuruldu (açılış hızı karşılaştırması) |
+
+Birden fazla maç verirsen sonda kariyer özeti de gelir: maç sayısı, galibiyet
+yüzdesi, toplam zar dağılımı ve beklenenden sapma.
+
 ## Panel uyarıları ne demek
 
 | Uyarı | Anlamı |
@@ -332,6 +353,7 @@ test/                     node:test ile birim + uçtan uca testler
   fixtures/               canlı oyundan kopyalanmış gerçek HTML
   helpers/html.mjs        testler için minik HTML ayrıştırıcı
 tools/
+  analiz.mjs              maç kayıtlarından istatistik çıkarır
   check-extension.mjs     manifest / sözdizimi / import yolu denetimi
   dump-log.js             eklentisiz çalışan konsol döküm betiği
 kurulum/                  tek seferlik kurulum + otomatik güncelleme betikleri

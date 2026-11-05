@@ -479,9 +479,14 @@ export class LogWatcher {
     if (!this.logEl) return { rows: [], gaps: 0, scrolled: false, note: 'log kutusu bulunamadı' };
 
     const found = new Map();
+    // Boşluk sayısı YALNIZ hiç görmediğimiz sıra numaralarından çıkar.
+    // Log'da metinsiz satırlar da var (ayraç, avatar); onları "kaybolmuş"
+    // saymak kullanıcıya her kayıtta olmayan bir veri kaybı bildiriyordu.
+    const seenIdx = new Set();
     let unindexed = 0;
     const grab = () => {
       for (const { el, idx } of this._rows()) {
+        if (Number.isFinite(idx)) seenIdx.add(idx);
         const text = rowToText(el);
         if (!text) continue;
         if (Number.isFinite(idx)) {
@@ -537,7 +542,11 @@ export class LogWatcher {
       .map(([, text], i) => ({ idx: -1 - i, text }));
 
     let gaps = 0;
-    for (let i = 1; i < rows.length; i += 1) gaps += rows[i].idx - rows[i - 1].idx - 1;
+    if (seenIdx.size) {
+      const lo = Math.min(...seenIdx);
+      const hi = Math.max(...seenIdx);
+      for (let i = lo; i <= hi; i += 1) if (!seenIdx.has(i)) gaps += 1;
+    }
 
     return {
       rows: [...rows, ...extra],

@@ -249,3 +249,35 @@ test('toplanan satırlarda zar bilgisi durur (kim ne attı sonradan çıkarılab
   assert.ok(res.rows.some((r) => r.text.startsWith('Emosh')));
   assert.ok(res.rows.some((r) => r.text.startsWith('Skuashy')));
 });
+
+/* ------------------------------------------------- boşluk sayısı
+ * Gerçek kayıtta "71 satırlık boşluk (kaydırıcı silmiş)" yazıyordu ama hiçbir
+ * şey kaybolmamıştı: colonist log'a metinsiz ayraç satırları da koyuyor ve
+ * onların sıra numaraları atlanmış görünüyor. Boşluk yalnız DOM'da HİÇ
+ * görmediğimiz numaralardan sayılmalı.
+ */
+test('metinsiz ayraç satırları boşluk sayılmaz', async () => {
+  const { w } = makeWatcher();
+  w.logEl = liveScroller({
+    total: 20,
+    window: 20,
+    lines: (i) => (i % 2 === 0 ? row(i, `satır ${i} rolled`) : row(i, '')),
+  });
+
+  const res = await w.collectAllRows(FAST);
+  assert.equal(res.rows.length, 10, 'yalnız metinli satırlar kayda girer');
+  assert.equal(res.gaps, 0, 'boş satırlar kayıp sayılmamalı');
+});
+
+test('gerçekten görülmeyen numara boşluk sayılır', async () => {
+  const { w } = makeWatcher();
+  const el = { scrollHeight: 100, clientHeight: 100, scrollTop: 0, parentElement: null };
+  // 5 ve 6 hiç yok: kaydırıcı silmiş.
+  Object.defineProperty(el, 'children', {
+    get: () => [row(4, 'a rolled'), row(7, 'b rolled')],
+  });
+  w.logEl = el;
+
+  const res = await w.collectAllRows(FAST);
+  assert.equal(res.gaps, 2);
+});
