@@ -10,7 +10,7 @@ rem  Bir daha indirmeye gerek yok: guncelle.cmd ayni klasoru
 rem  tazeler, Chrome'daki uzanti ayni yerden okur.
 rem ============================================================
 setlocal
-set REPO=https://github.com/Emoshhh/colonist
+set REPO=https://github.com/Emoshhh/Colonist-Resource-Tracker
 set BRANCH=claude/colonist-opponent-resource-tracker-sgde1g
 set DEST=%LOCALAPPDATA%\colonist-tracker
 

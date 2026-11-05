@@ -71,7 +71,7 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
  */
 
 const MANIFEST_URL =
-  'https://raw.githubusercontent.com/Emoshhh/colonist/' +
+  'https://raw.githubusercontent.com/Emoshhh/Colonist-Resource-Tracker/' +
   'claude/colonist-opponent-resource-tracker-sgde1g/extension/manifest.json';
 const ALARM = 'colonist-tracker-update-check';
 const CHECK_EVERY_MIN = 180;

@@ -10,7 +10,7 @@
 # ============================================================
 set -euo pipefail
 
-REPO="https://github.com/Emoshhh/colonist"
+REPO="https://github.com/Emoshhh/Colonist-Resource-Tracker"
 BRANCH="claude/colonist-opponent-resource-tracker-sgde1g"
 DEST="${COLONIST_TRACKER_DIR:-$HOME/.colonist-tracker}"
 
