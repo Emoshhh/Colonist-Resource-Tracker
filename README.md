@@ -9,10 +9,10 @@ sürekli karşılaştırır, böylece kaçan bir log satırı sessizce yanlış 
 ┌──────────────────────────────────────────────┐
 │ ● Kaynak Takibi      % 🎲 ⤢ ⟲ ⧉ –            │
 ├──────────────────────────────────────────────┤
-│         🌲 🧱 🐑 🌾 ⛏  ?  Σ  GK │ 🛣 🏠 🏛   │
-│ Ali      1  0  2  1  0  0  4  1 │ 13  3  4   │  ← eli tamamen biliniyor
-│ Veli     0  1  1  0  1  2  5  0 │  0  2  3   │  ← 2 kartın türü bilinmiyor
-│               ‾        ‾        │  ↑          │     yolu bitmiş: artık yol yapamaz
+│         🌲 🧱 🐑 🌾 ⛏  ? │ 🛣 🏠 🏛        │
+│ Ali      1  0  2  1  0  0 │ 13  3  4        │  ← eli tamamen biliniyor
+│ Veli     0  1  1  0  1  2 │  0  2  3        │  ← 2 kartın türü bilinmiyor
+│               ‾        ‾  │  ↑               │     yolu bitmiş: artık yol yapamaz
 ├──────────────────────────────────────────────┤
 │  3  6  9 13 17 21 16 12  8  5  3             │  ← kaç kez geldiği
 │  ▁  ▂  ▃  ▄  ▆  █  ▆  ▄  ▃  ▂  ▁   113 zar   │
@@ -44,7 +44,10 @@ Panel bu iç durumu iki sayıya indirger: her kaynak için **garanti alt sınır
 (tüm olası dağılımlarda en az bu kadar var) ve geri kalan belirsiz kartların
 toplamı olan `?` sütunu. Hücrenin üstüne gelince üst sınır ve olasılık da görünür.
 
-Toplam kart sayısı (Σ) her zaman kesindir — çalma toplamı değiştirmez, sadece yerini değiştirir.
+Toplam kart sayısı her zaman kesindir — çalma toplamı değiştirmez, sadece yerini değiştirir.
+Panelde ayrı sütun olarak gösterilmiyor; oyuncunun adının üstüne gelince toplam kart ve
+gelişim kartı sayısı görünür. Oyunun kendi paneliyle karşılaştırma yine yapılıyor, tutmazsa
+üstte `⚠ N sayı oyun paneliyle uyuşmuyor` yazar.
 
 ## Kalan yapı taşları
 

@@ -9,7 +9,7 @@
   top: 90px;
   right: 16px;
   z-index: 2147483000;
-  width: calc(404px * var(--ct-scale));
+  width: calc(360px * var(--ct-scale));
   font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: calc(12px * var(--ct-scale));
   color: #e8ecf1;
@@ -188,6 +188,15 @@
   font-weight: 400;
 }
 
+/*
+ * Yapı sütunları kart sütunlarından ayrılsın: ilk yapı hücresine ince bir
+ * dikey çizgi ve biraz boşluk. Çizgi başlıktan son satıra kadar iniyor.
+ */
+#colonist-tracker .ct-piece-first {
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
+  padding-left: calc(7px * var(--ct-scale));
+}
+
 /* kalan yapı taşları: yol / köy / şehir */
 #colonist-tracker .ct-piece {
   color: #9fb3c8;
@@ -219,14 +228,6 @@
   font-size: calc(8px * var(--ct-scale));
   line-height: calc(8px * var(--ct-scale));
   color: #c9a15a;
-}
-
-#colonist-tracker .ct-total {
-  font-weight: 600;
-}
-
-#colonist-tracker .ct-dev {
-  color: #b28dff;
 }
 
 #colonist-tracker .ct-empty {

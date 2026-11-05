@@ -368,23 +368,9 @@ export class Overlay {
     unknownTh.classList.add('ct-unknown');
     head.appendChild(unknownTh);
 
-    head.appendChild(el('th', 'ct-th', 'Σ'));
-
-    const devTh = el('th', 'ct-th');
-    if (this.icons.devcard) {
-      const devImg = el('img', 'ct-icon');
-      devImg.src = this.icons.devcard;
-      devImg.alt = 'Gelişim kartı';
-      devImg.title = 'Elindeki oynanmamış gelişim kartı';
-      devTh.appendChild(devImg);
-    } else {
-      devTh.textContent = 'GK';
-      devTh.title = 'Gelişim kartı';
-    }
-    head.appendChild(devTh);
-
-    PIECES.forEach((item) => {
-      const th = el('th', 'ct-th ct-piece-th');
+    PIECES.forEach((item, i) => {
+      // İlk yapı sütunu kart sütunlarından ince bir çizgi ve boşlukla ayrılır.
+      const th = el('th', `ct-th ct-piece-th${i === 0 ? ' ct-piece-first' : ''}`);
       th.appendChild(this._buildingIcon(item));
       th.title = `${PIECE_LABEL[item]}: kalan taş (başlangıç ${PIECE_SUPPLY[item]})`;
       head.appendChild(th);
@@ -397,7 +383,7 @@ export class Overlay {
     if (!report.players.length) {
       const tr = el('tr', 'ct-row');
       const td = el('td', 'ct-td ct-empty');
-      td.colSpan = 12;
+      td.colSpan = 10;
       td.textContent =
         this.status === 'connected'
           ? 'Log’a bağlandı, ilk hamle bekleniyor…'
@@ -412,7 +398,12 @@ export class Overlay {
       const tr = el('tr', 'ct-row');
       const name = el('td', 'ct-td ct-name', player.name);
       if (player.name === this.me) name.classList.add('ct-me');
-      name.title = `${player.name}\n(tıkla: "ben buyum" olarak işaretle)`;
+      // Σ ve GK sütunları kaldırıldı; sayılar burada erişilebilir kalsın.
+      name.title =
+        `${player.name}\n` +
+        `toplam kart: ${player.totalMax} (${player.known} kesin + ${player.unknown} bilinmeyen)\n` +
+        `gelişim kartı: ${player.devCards}\n` +
+        '(tıkla: "ben buyum" olarak işaretle)';
       name.addEventListener('click', () => this.onPickMe(player.name));
       tr.appendChild(name);
 
@@ -445,33 +436,20 @@ export class Overlay {
         : 'Kimliği bilinmeyen kart yok — tüm el kesin.';
       tr.appendChild(unknown);
 
+      // Toplam ve gelişim kartı sütunları gösterilmiyor ama panelle
+      // KARŞILAŞTIRMA sürüyor: tutmayan sayı üstteki uyarı satırında çıkar.
       const truth = this._panelFor(player.name);
-      const total = el('td', 'ct-td ct-total', String(player.totalMax));
-      total.title = `toplam kart (${player.known} kesin + ${player.unknown} bilinmeyen)`;
       if (truth && typeof truth.cards === 'number' && truth.cards !== player.totalMax) {
-        total.classList.add('ct-mismatch');
-        total.textContent = `${player.totalMax}≠${truth.cards}`;
-        total.title =
-          `Sayım tutmuyor: bende ${player.totalMax}, oyun panelinde ${truth.cards}.\n` +
-          'Bir log satırı kaçmış olabilir — ⟲ ile sıfırlayabilirsin.';
         mismatches += 1;
       }
-      tr.appendChild(total);
-
-      const dev = el('td', 'ct-td ct-dev', String(player.devCards));
-      dev.title = 'elindeki oynanmamış gelişim kartı';
       if (truth && typeof truth.devCards === 'number' && truth.devCards !== player.devCards) {
-        dev.classList.add('ct-mismatch');
-        dev.textContent = `${player.devCards}≠${truth.devCards}`;
-        dev.title = `Gelişim kartı: bende ${player.devCards}, oyun panelinde ${truth.devCards}.`;
         mismatches += 1;
       }
-      tr.appendChild(dev);
 
       const left = player.pieces || PIECE_SUPPLY;
-      PIECES.forEach((item) => {
+      PIECES.forEach((item, i) => {
         const n = left[item] ?? PIECE_SUPPLY[item];
-        const td = el('td', 'ct-td ct-piece', String(n));
+        const td = el('td', `ct-td ct-piece${i === 0 ? ' ct-piece-first' : ''}`, String(n));
         if (!n) td.classList.add('ct-piece-out');
         else if (n <= 2) td.classList.add('ct-piece-low');
         td.title =
