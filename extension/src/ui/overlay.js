@@ -496,5 +496,53 @@ export class Overlay {
     }
     box.appendChild(bars);
     box.appendChild(el('div', 'ct-rolls-meta', `${report.rollCount} zar`));
+    this._renderDiceTable(box, report);
+  }
+
+  /**
+   * Kim hangi zarı attı tablosu.
+   *
+   * Oyunun kendi istatistiklerinde bu kırılım yok — yalnız toplam dağılım var.
+   * Grafiğin altında kalıcı tablo olarak duruyor; ipucuna gizlemek yerine
+   * doğrudan görünsün diye.
+   */
+  _renderDiceTable(box, report) {
+    const byPlayer = report.rollsByPlayer;
+    if (!byPlayer || !byPlayer.size) return;
+
+    const table = el('table', 'ct-dice-table');
+
+    const head = el('tr');
+    head.appendChild(el('th', '', ''));
+    for (let n = 2; n <= 12; n += 1) {
+      const th = el('th', n === 7 ? 'ct-dice-7' : '', String(n));
+      head.appendChild(th);
+    }
+    head.appendChild(el('th', 'ct-dice-total', 'Σ'));
+    table.appendChild(head);
+
+    for (const [name, arr] of byPlayer) {
+      const tr = el('tr');
+      const nameCell = el('td', 'ct-dice-name', name);
+      if (name === this.me) nameCell.classList.add('ct-me');
+      nameCell.title = name;
+      tr.appendChild(nameCell);
+
+      let total = 0;
+      for (let n = 2; n <= 12; n += 1) {
+        const c = arr[n];
+        total += c;
+        const td = el('td', n === 7 ? 'ct-dice-7' : '', String(c));
+        if (!c) td.classList.add('ct-zero');
+        td.title = `${name} · ${n}: ${c} kez`;
+        tr.appendChild(td);
+      }
+      const totalCell = el('td', 'ct-dice-total', String(total));
+      totalCell.title = `${name} toplam ${total} zar attı`;
+      tr.appendChild(totalCell);
+      table.appendChild(tr);
+    }
+
+    box.appendChild(table);
   }
 }

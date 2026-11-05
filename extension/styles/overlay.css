@@ -294,6 +294,59 @@
   margin-top: 2px;
 }
 
+/* kim hangi zarı attı tablosu (grafiğin altında) */
+#colonist-tracker .ct-dice-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin-top: calc(6px * var(--ct-scale));
+  font-size: calc(10px * var(--ct-scale));
+  font-variant-numeric: tabular-nums;
+}
+
+#colonist-tracker .ct-dice-table th,
+#colonist-tracker .ct-dice-table td {
+  text-align: center;
+  padding: calc(2px * var(--ct-scale)) 0;
+  color: #c9d3de;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+#colonist-tracker .ct-dice-table th {
+  color: #8e9aa8;
+  font-weight: 600;
+  border-top: 0;
+}
+
+/* ad sütunu: sayılardan geniş, taşarsa kırpılır */
+#colonist-tracker .ct-dice-table tr > *:first-child {
+  width: calc(62px * var(--ct-scale));
+  max-width: calc(62px * var(--ct-scale));
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 7 ayrı renkte: haydut sayısı oyunun gidişatını belirliyor */
+#colonist-tracker .ct-dice-table .ct-dice-7 {
+  color: #ffd88a;
+}
+
+#colonist-tracker .ct-dice-table .ct-zero {
+  color: #55606d;
+}
+
+#colonist-tracker .ct-dice-table .ct-me {
+  color: #7fd0ff;
+  font-weight: 600;
+}
+
+#colonist-tracker .ct-dice-table .ct-dice-total {
+  font-weight: 600;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
 #colonist-tracker .ct-rolls-empty,
 #colonist-tracker .ct-rolls-meta {
   font-size: calc(10px * var(--ct-scale));

@@ -17,6 +17,9 @@ sürekli karşılaştırır, böylece kaçan bir log satırı sessizce yanlış 
 │  3  6  9 13 17 21 16 12  8  5  3             │  ← kaç kez geldiği
 │  ▁  ▂  ▃  ▄  ▆  █  ▆  ▄  ▃  ▂  ▁   113 zar   │
 │  2  3  4  5  6  7  8  9 10 11 12             │
+│          2  3  4  5  6  7  8  9 10 11 12  Σ  │
+│ Ali      2  1  5  5  7  7  3  4  5  3  1  43 │  ← kim hangi zarı attı
+│ Veli     1  2  5  6  4  8  5  6  3  2  1  43 │
 └──────────────────────────────────────────────┘
 ```
 
@@ -134,13 +137,23 @@ senin oyundaki adını bilmesi gerekir.
 | Düğme | İşlev |
 |-------|-------|
 | % | Olasılıklı görünüm: kesin sayı yerine beklenen değer + aralık |
-| 🎲 | Zar istatistiği grafiğini aç/kapat (çubukların üstünde kaç kez geldiği yazar; çubuğun üstüne gelince kimin kaç kez attığı) |
+| 🎲 | Zar istatistiğini aç/kapat: genel dağılım grafiği + kim hangi zarı attı tablosu |
 | ⤢ | Panel boyutu: küçük → normal → büyük (seçim saklanır) |
 | ⟲ | Sayacı sıfırla ve log'u baştan oku |
 | ⧉ | Tanınmayan log satırlarını + ham log'u panoya kopyala |
 | – | Paneli küçült |
 
 Başlık çubuğundan sürükleyerek taşıyabilirsin; konum ve durum `localStorage`'da saklanır.
+
+## Kim hangi zarı attı
+
+Grafiğin altındaki tablo her oyuncunun attığı zarları ayrı ayrı sayar; 7 sütunu
+ayrı renkte, sağda oyuncunun toplam atış sayısı.
+
+Bu kırılım **oyunun hiçbir yerinde yok** — colonist'in oyun sonu istatistik
+ekranındaki "Dice Rolls" bile yalnız toplam dağılımı gösterir. Log satırı zarı
+atanı yazdığı için eklenti tutabiliyor; tutulmazsa geriye dönük çıkarmanın yolu
+yok (log satırları sanal kaydırıcıdan silinir ve arşive yalnız nadir satırlar girer).
 
 ## Panel uyarıları ne demek
 
