@@ -173,7 +173,7 @@ Başlık çubuğundan sürükleyerek taşıyabilirsin; konum ve durum `localStor
 | `N sayı oyun panelinden düzeltildi` | Log'da bir şey kaçtı, fark panelden kapatıldı. Toplamlar doğru; o kartların türü `?` sütununda. |
 | `N sayı oyun paneliyle uyuşmuyor` | Fark henüz taze; birkaç saniye içinde ya kendiliğinden kapanır ya da düzeltilir. |
 | `N satır okunamadı` | Sanal kaydırıcı yüzünden satır kaçtı (aşağıya bak). |
-| `N log satırı hesapla çelişti` | Bir hamle mevcut duruma göre imkânsızdı. Motor durumu bozmaz, son geçerli hâlini korur. |
+| `N log satırı hesapla çelişti` | Bir hamle mevcut duruma göre imkânsızdı. Motor durumu bozmaz, son geçerli hâlini korur ve sayıları hemen panelden eşitler. |
 | `X BU TUR KAZANABİLİR` | Açık puanı + elindeki gelişim kartlarının hepsi zafer puanı olsa 10'a ulaşıyor. Hata değil, uyarı. |
 | `yapı sayımı zafer puanıyla tutmuyor` | Köy/şehir sayımı panelin zafer puanıyla çelişiyor; bir inşa satırı kaçmış olabilir. |
 | `olasılık ağacı kırpıldı` | Çok fazla belirsiz çalma birikti, olasılık ağacı sınıra dayandı. Toplamlar hâlâ doğru ama kaynak alt/üst sınırları artık garanti değil. ⟲ ile temizlenir. |

@@ -6,7 +6,7 @@ import { Game } from './core/game.js';
 import { winThreat, pieceCheck, deckState, awardRace } from './core/insights.js';
 import { parseMessage, playersIn, avatarOf } from './core/parser.js';
 import { LogWatcher, findOwnUsername } from './dom/log-reader.js';
-import { readPlayerPanel } from './dom/player-panel.js';
+import { readPlayerPanel, findPlayerPanel } from './dom/player-panel.js';
 import {
   imageToResource,
   imageToBuilding,
@@ -139,6 +139,15 @@ function debugSummary() {
   ];
 
   if (!panelRows.length) lines.push('(panel okunamadı)');
+
+  // Panelde olmayan oyuncu eşitlenemez, yani sessizce düzeltmesiz kalır.
+  // Bunu ayrıca söylemek gerekiyor: satır listesinde yokluk göze çarpmıyor.
+  const missingFromPanel = game.players.filter((n) => !panelRows.some((r) => r.name === n));
+  if (missingFromPanel.length) {
+    lines.push(`⚠ PANELDE BULUNAMAYAN OYUNCU: ${missingFromPanel.join(', ')}`);
+    lines.push('   (bu oyuncular panelden doğrulanamıyor ve düzeltilemiyor)');
+  }
+
   for (const row of panelRows) {
     const mine = rep.players.find((p) => p.name === row.name);
     const cmp = mine
@@ -210,6 +219,23 @@ function debugSummary() {
   return lines.join('\n');
 }
 
+/**
+ * Oyuncu panelinin ham HTML'i. Panelden bir oyuncu okunamadığında sebebini
+ * ancak işaretlemeyi görerek anlayabiliyoruz; bunu her seferinde kullanıcıdan
+ * elle istemek yerine döküme koyuyoruz.
+ */
+function panelHtml() {
+  try {
+    const el = findPlayerPanel(document);
+    if (!el) return '(panel elemanı bulunamadı)';
+    const html = el.outerHTML || '';
+    const LIMIT = 20000;
+    return html.length > LIMIT ? html.slice(0, LIMIT) + `\n…(${html.length} karakterden kırpıldı)` : html;
+  } catch (err) {
+    return `(panel okunamadı: ${err && err.message})`;
+  }
+}
+
 const overlay = new Overlay({
   onReset: () => {
     game = new Game();
@@ -238,6 +264,9 @@ const overlay = new Overlay({
       '',
       `--- tanınmayan satırlar (${game.unknownMessages.length}) ---`,
       ...game.unknownMessages,
+      '',
+      '--- oyuncu paneli (ham HTML) ---',
+      panelHtml(),
       '',
       '--- ham log (HTML) ---',
       watcher.dump(),
@@ -327,7 +356,12 @@ function handleMessage(parts) {
 
   const event = parseMessage(parts, { players: game.players, me });
   if (DEBUG) console.debug('[colonist-tracker]', event, parts);
-  game.applyEvent(event);
+  // Çelişki = hesabımız gerçekle çakıştı. Boşlukta olduğu gibi beklemeden
+  // panelin sayılarına dönülür; yoksa tek bir hatadan çelişki zinciri doğuyor.
+  if (game.applyEvent(event)) {
+    forceSync = true;
+    setTimeout(panelSyncTick, 400);
+  }
   scheduleRender();
 }
 

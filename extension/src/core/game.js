@@ -90,8 +90,11 @@ export class Game {
    */
   noteMissed(count) {
     this.missed += count;
-    // Satır kaçırdıysak oyun çoktan başlamıştır.
-    if (count > 0) this.setupPhase = false;
+    // DİKKAT: burada setupPhase'i kapatmak cazip ("satır kaçtıysa oyun
+    // başlamıştır") ama geri tepiyor. Kurulum SIRASINDA satır kaçarsa
+    // kalan bedava yerleştirmeler ücretli sayılır, her biri imkânsız çıkar
+    // ve çelişki zinciri başlar. Kurulumun bittiğini zaten zar satırı
+    // kesin söylüyor (_noteGameStarted), o yüzden tahmin etmiyoruz.
   }
 
   get players() {
@@ -114,8 +117,14 @@ export class Game {
     this.setupPhase = false;
   }
 
+  /**
+   * Olayı uygula; hamle mevcut duruma göre imkânsız çıktıysa true döner.
+   * Çağıran bunu "durum gerçekle çelişti" sinyali olarak kullanıp paneli
+   * hemen yeniden eşitler.
+   */
   applyEvent(ev) {
-    if (!ev) return;
+    if (!ev) return false;
+    const before = this.tracker.desyncs.length;
     this.lastEvent = ev;
     this._noteGameStarted(ev);
     const t = this.tracker;
@@ -208,6 +217,8 @@ export class Game {
       default:
         break;
     }
+
+    return this.tracker.desyncs.length > before;
   }
 
   report() {

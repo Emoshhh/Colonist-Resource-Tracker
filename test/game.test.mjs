@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { Game } from '../extension/src/core/game.js';
 import { parseMessage, playersIn } from '../extension/src/core/parser.js';
+import { toVector } from '../extension/src/core/resources.js';
 
 const P = (v) => ({ t: 'player', v });
 const T = (v) => ({ t: 'text', v });
@@ -111,12 +112,14 @@ test('zar ikonu tanınmasa bile kurulum biter ve maliyetler düşer', () => {
   assert.equal(cell(rep, 'Ali', 'lumber').max, 0, 'yol maliyeti düşülmeli');
 });
 
-test('kaçan satır sayısı raporlanır ve kurulumu kapatır', () => {
+test('kaçan satır sayısı raporlanır', () => {
   const g = new Game();
   g.noteMissed(12);
   const rep = g.report();
   assert.equal(rep.missed, 12);
-  assert.equal(rep.setupPhase, false);
+  // Kurulum durumu DEĞİŞMEMELİ: eskiden burada kapatılıyordu ve kurulum
+  // sırasında satır kaçınca çelişki zinciri doğuruyordu.
+  assert.equal(rep.setupPhase, true);
 });
 
 test('tanınmayan satırlar durumu bozmadan biriktirilir', () => {
@@ -128,4 +131,48 @@ test('tanınmayan satırlar durumu bozmadan biriktirilir', () => {
   assert.equal(rep.unknownCount, 1);
   assert.equal(cell(rep, 'Ali', 'ore').min, 1);
   assert.equal(rep.desyncs, 0);
+});
+
+/* ------------------------------------------------- kurulumda satır kaçması
+ * Gerçek hata: 8 zarlık bir oyunda 7 çelişki çıktı. Sebebi noteMissed'in
+ * "satır kaçtıysa oyun başlamıştır" diye setupPhase'i kapatmasıydı: kurulum
+ * sırasında satır kaçınca kalan BEDAVA yerleştirmeler ücretli sayılıyor,
+ * her biri imkânsız çıkıyor ve çelişki zinciri başlıyordu.
+ */
+
+test('kurulumda satır kaçması bedava yerleştirmeleri ücretli yapmaz', () => {
+  const g = new Game(['A']);
+  assert.equal(g.setupPhase, true);
+
+  g.noteMissed(2); // kurulum sırasında iki satır kaçtı
+  assert.equal(g.setupPhase, true, 'kaçan satır kurulumu bitirmemeli');
+
+  // Kalan kurulum yerleştirmeleri hâlâ bedava: kaynağı olmadan yapılabilmeli.
+  const desync = g.applyEvent({ kind: 'place', player: 'A', item: 'settlement' });
+  assert.equal(desync, false, 'çelişki üretmemeli');
+  assert.equal(g.tracker.desyncs.length, 0);
+  assert.equal(g.report().players[0].totalMax, 0, 'kaynak düşülmemeli');
+  assert.equal(g.report().players[0].pieces.settlement, 4, 'taş yine harcanmalı');
+});
+
+test('kurulumu zar satırı bitirir, tahmin değil', () => {
+  const g = new Game(['A']);
+  g.noteMissed(5);
+  assert.equal(g.setupPhase, true);
+
+  g.applyEvent({ kind: 'roll', player: 'A', total: 8, dice: [4, 4] });
+  assert.equal(g.setupPhase, false, 'zar atıldıysa kurulum bitmiştir');
+
+  // Artık inşa ücretli: kaynağı olmayan oyuncu çelişki üretir.
+  const desync = g.applyEvent({ kind: 'build', player: 'A', item: 'road' });
+  assert.equal(desync, true);
+});
+
+test('applyEvent çelişki olup olmadığını döndürür', () => {
+  const g = new Game(['A']);
+  g.setupPhase = false;
+  g.tracker.gain('A', toVector({ lumber: 1, brick: 1 }));
+
+  assert.equal(g.applyEvent({ kind: 'build', player: 'A', item: 'road' }), false, 'kaynağı vardı');
+  assert.equal(g.applyEvent({ kind: 'build', player: 'A', item: 'road' }), true, 'artık yok');
 });
