@@ -52,6 +52,87 @@ function newPlayer(name) {
   };
 }
 
+/**
+ * Haydudun engellediği üretimi geri çıkarır.
+ *
+ * Colonist "X is blocked by the Robber. No resources produced" derken KİMİN
+ * engellendiğini yazmıyor — yalnız arazinin resmini koyuyor. Ama her oyuncunun
+ * hangi zarda ne ürettiği log'un geri kalanından biliniyor: aynı sayı engelsiz
+ * geldiğinde ne aldıysa, engelli gelişte onu alamamış demektir.
+ *
+ * Tahmin için engellenen atıştan ÖNCEKİ en son örnek kullanılır. Üretim oyun
+ * boyunca yalnız artar (köy -> şehir, yeni köyler), dolayısıyla önceki örnek
+ * bir ALT SINIR verir: "en az bu kadarını alamadı". Sonraki bir örnek almak
+ * kaybı şişirirdi — rakip arada o araziye şehir dikmiş olabilir. Öncesi hiç
+ * yoksa sonraki en erken örnek kullanılır ve sayı üst sınıra yaklaşır.
+ */
+function attachRobberLoss(players, rollLog) {
+  for (const p of players) {
+    p.robberLost = emptyRes();
+    p.robberLostTotal = 0;
+    p.robberBlockedRolls = 0;
+    p.robberUnknown = 0;
+  }
+  const byName = new Map(players.map((p) => [p.name, p]));
+
+  // Engelsiz atışlarda her oyuncunun o sayıdan ne aldığı.
+  const samples = new Map(); // "ad|sayı" -> [{no, vec}]
+  for (const r of rollLog) {
+    if (r.blocked) continue;
+    for (const p of players) {
+      const key = `${p.name}|${r.n}`;
+      if (!samples.has(key)) samples.set(key, []);
+      samples.get(key).push({ no: r.no, vec: r.got[p.name] || emptyRes() });
+    }
+  }
+
+  for (const r of rollLog) {
+    if (!r.blocked) continue;
+    for (const p of players) {
+      if (r === rollLog[0]) continue;
+      const list = samples.get(`${p.name}|${r.n}`) || [];
+      if (!list.length) {
+        p.robberUnknown += 1;
+        continue;
+      }
+      // Önceki en son örnek (alt sınır); yoksa sonraki en erken.
+      let best = null;
+      for (const s of list) {
+        if (s.no >= r.no) continue;
+        if (!best || s.no > best.no) best = s;
+      }
+      if (!best) {
+        for (const s of list) {
+          if (s.no <= r.no) continue;
+          if (!best || s.no < best.no) best = s;
+        }
+      }
+      if (!best) {
+        p.robberUnknown += 1;
+        continue;
+      }
+      const actual = r.got[p.name] || emptyRes();
+      let lost = 0;
+      for (const res of RES) {
+        if (r.tile && res !== r.tile) continue; // arazi biliniyorsa yalnız o kaynak
+        const diff = best.vec[res] - actual[res];
+        if (diff > 0) {
+          p.robberLost[res] += diff;
+          lost += diff;
+        }
+      }
+      if (lost) p.robberBlockedRolls += 1;
+    }
+  }
+
+  // Toplam = engellenen üretim + çalınan kartlar.
+  for (const p of players) {
+    p.robberLostTotal = RES.reduce((a, r) => a + p.robberLost[r], 0);
+    p.robberTotalWithSteals = p.robberLostTotal + RES.reduce((a, r) => a + p.lostCards[r], 0);
+  }
+  void byName;
+}
+
 export function parseMatch(text, fileName = '') {
   const lines = text.split('\n');
   const head = {};
@@ -75,6 +156,10 @@ export function parseMatch(text, fileName = '') {
   let winner = null;
   let rollNo = 0;
   let lastRoller = null;
+  // Her zar atışı için kimin ne ürettiği: haydudun engellediği üretimi
+  // buradan geri çıkarıyoruz (log hangi oyuncunun engellendiğini yazmıyor).
+  const rollLog = [];
+  const curRoll = () => rollLog[rollLog.length - 1] || null;
 
   for (const raw of lines) {
     const m = /^\[\s*(-?\d+)\]\s(.*)$/.exec(raw);
@@ -89,6 +174,7 @@ export function parseMatch(text, fileName = '') {
       p.rollCount += 1;
       rollNo += 1;
       lastRoller = p;
+      rollLog.push({ n: total, no: rollNo, by: p.name, blocked: false, tile: null, got: {} });
       continue;
     }
 
@@ -100,10 +186,15 @@ export function parseMatch(text, fileName = '') {
 
     if ((g = /^(.+?) got ((?:\[[^\]]+\]\s*)+)$/.exec(line))) {
       const p = get(g[1]);
+      const roll = curRoll();
       for (const r of tags(g[2])) {
         if (!(r in p.gained)) continue;
         p.gained[r] += 1;
         p.gainedTotal += 1;
+        if (roll) {
+          roll.got[p.name] = roll.got[p.name] || emptyRes();
+          roll.got[p.name][r] += 1;
+        }
       }
       continue;
     }
@@ -134,7 +225,14 @@ export function parseMatch(text, fileName = '') {
     }
 
     if (/is blocked by the Robber/.test(line)) {
-      // Kimin engellendiği satırda yazmıyor; zarı atan turda üretim kaybı olur.
+      // Satır kimin engellendiğini YAZMIYOR; yalnız arazi resmini koyuyor.
+      // Yeni kayıtlarda "[arazi Maden]" olarak duruyor, eskilerde "[?]".
+      const roll = curRoll();
+      if (roll) {
+        roll.blocked = true;
+        const t = /\[arazi ([^\]]+)\]/.exec(line);
+        if (t && t[1] !== 'çöl') roll.tile = t[1];
+      }
       if (lastRoller) lastRoller.blocked += 1;
       continue;
     }
@@ -185,7 +283,49 @@ export function parseMatch(text, fileName = '') {
     }
   }
 
-  return { head, file: fileName, me, winner, rollNo, players: [...players.values()] };
+  const list = [...players.values()];
+  attachRobberLoss(list, rollLog);
+
+  /*
+   * Başlıktaki zar tablosu maç boyunca CANLI tutuldu; gövdedeki log ise
+   * kaydırıcı eski satırları silmişse eksik olabilir. Başlık daha çok zar
+   * biliyorsa zar istatistiğinde ona güveniriz (üretim/çalma gibi kalemler
+   * yalnız gövdeden çıkıyor, onlar eksik kalır ve raporda öyle işaretlenir).
+   */
+  let headerRolls = 0;
+  const table = /--- zar dağılımı[^\n]*\n([\s\S]*?)\n\s*(?:---|$)/.exec(text);
+  if (table) {
+    for (const row of table[1].split('\n')) {
+      const cells = row.trim().split(/\s+/);
+      if (cells.length < 13) continue;
+      const name = cells.slice(0, cells.length - 12).join(' ');
+      if (!players.has(name)) continue;
+      const nums = cells.slice(cells.length - 12).map(Number);
+      if (nums.some((n) => !Number.isFinite(n))) continue;
+      const p = players.get(name);
+      const total = nums[11];
+      if (total > p.rollCount) {
+        for (let n = 2; n <= 12; n += 1) p.rolls[n] = nums[n - 2];
+        p.rollCount = total;
+        p.rollsFromHeader = true;
+        headerRolls += total;
+      }
+    }
+  }
+  const bodyRolls = rollNo;
+  const totalRolls = Math.max(rollNo, list.reduce((a, p) => a + p.rollCount, 0));
+
+  return {
+    head,
+    file: fileName,
+    me,
+    winner,
+    rollNo: totalRolls,
+    bodyRolls,
+    partial: headerRolls > 0,
+    rollLog,
+    players: list,
+  };
 }
 
 /* ------------------------------------------------------------------ yazdır */
@@ -221,6 +361,13 @@ function matchReport(m) {
       (m.winner ? `  ·  kazanan: ${m.winner}` : '  ·  kazanan: (log\'da yok)') +
       `  ·  ${m.rollNo} zar`,
   );
+  if (m.partial) {
+    out.push(
+      `⚠ LOG EKSİK: kayıtta ${m.bodyRolls} zarlık bölüm var, maç ${m.rollNo} zar sürmüş.` +
+        ' Zar tablosu başlıktan (canlı sayımdan) alındı; üretim, çalma ve' +
+        ' inşa sayıları yalnız kaydedilen bölümü kapsar.',
+    );
+  }
   out.push('');
 
   // --- zar
@@ -259,6 +406,37 @@ function matchReport(m) {
     out.push(
       `  ${pad(p.name.slice(0, 13), 14)} haydut ${p.robberMoves} kez · çaldı: ${stole}` +
         ` · çalındı: ${lost} · üretimi engellendi: ${p.blocked} · 7'de attığı kart: ${p.discarded}`,
+    );
+  }
+  out.push('');
+
+  // --- haydut yüzünden alınamayan kaynaklar (asıl merak edilen)
+  out.push('HIRSIZ YÜZÜNDEN ALINAMAYAN KAYNAKLAR  (engellenen üretim + çalınan)');
+  out.push(
+    pad('', 14) +
+      RES.map((r) => num(r, 8)).join('') +
+      num('engel', 8) +
+      num('çalınan', 9) +
+      num('TOPLAM', 9),
+  );
+  for (const p of m.players) {
+    const stolen = RES.reduce((a, r) => a + p.lostCards[r], 0);
+    out.push(
+      pad(p.name.slice(0, 13), 14) +
+        RES.map((r) => num(p.robberLost[r] + p.lostCards[r], 8)).join('') +
+        num(p.robberLostTotal, 8) +
+        num(stolen, 9) +
+        num(p.robberLostTotal + stolen, 9),
+    );
+  }
+  for (const p of m.players) {
+    const detay = RES.filter((r) => p.robberLost[r])
+      .map((r) => `${r} ${p.robberLost[r]}`)
+      .join(', ');
+    out.push(
+      `  ${pad(p.name.slice(0, 13), 14)} haydut ${p.robberBlockedRolls} atışta üretimini kesti` +
+        (detay ? ` — ${detay}` : ' — kayıp yok') +
+        (p.robberUnknown ? ` · ${p.robberUnknown} atış hesaplanamadı` : ''),
     );
   }
   out.push('');
@@ -322,6 +500,12 @@ function careerReport(matches) {
       a.devBought += p.devBought;
       a.discarded += p.discarded;
       a.robberMoves += p.robberMoves;
+      a.robberLost = a.robberLost || emptyRes();
+      a.lostCards = a.lostCards || emptyRes();
+      for (const r of RES) {
+        a.robberLost[r] += (p.robberLost && p.robberLost[r]) || 0;
+        a.lostCards[r] += p.lostCards[r];
+      }
     }
   }
   out.push(pad('oyuncu', 14) + num('maç', 5) + num('galip', 7) + num('%', 7) + num('zar', 7) + num('7', 5) + num('üretim', 9) + num('sapma', 8));
@@ -337,6 +521,18 @@ function careerReport(matches) {
         num(diceLuck(a) ? diceLuck(a).toFixed(1) : '-', 8),
     );
   }
+  out.push('');
+  out.push('HIRSIZ BİLANÇOSU (tüm maçlar · engellenen üretim + çalınan kart)');
+  out.push(pad('oyuncu', 14) + RES.map((r) => num(r, 8)).join('') + num('TOPLAM', 9));
+  for (const a of all.values()) {
+    const tot = RES.reduce((x, r) => x + a.robberLost[r] + a.lostCards[r], 0);
+    out.push(
+      pad(a.name.slice(0, 13), 14) +
+        RES.map((r) => num(a.robberLost[r] + a.lostCards[r], 8)).join('') +
+        num(tot, 9),
+    );
+  }
+
   out.push('');
   out.push('TOPLAM ZAR DAĞILIMI (tüm maçlar)');
   const tot = Array(13).fill(0);

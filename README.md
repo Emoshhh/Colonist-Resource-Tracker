@@ -254,12 +254,30 @@ Her maç için şunları yazar:
 | **Zar** | Kim hangi sayıyı kaç kez attı + adil zarda kaç gelmeliydi + sapma (ki-kare) |
 | **Kaynak üretimi** | Her oyuncunun zardan aldığı kart, kaynak kaynak, zar başına ortalama |
 | **Haydut ve çalma** | Kim kaç kez haydut oynadı, kimden kaç kart çaldı, kaç kez üretimi engellendi, 7'de kaç kart attı |
+| **Hırsız yüzünden alınamayan kaynaklar** | Kaynak kaynak: engellenen üretim + çalınan kart (aşağıya bak) |
 | **Takaslar** | Kaç takas, hangi oranla (4:1 banka mı 2:1 liman mı — hangi limanın olduğu buradan çıkar) |
 | **İnşa / gelişim kartı** | Yol-köy-şehir sayısı, alınan ve kullanılan gelişim kartları |
 | **Zaman çizelgesi** | Kaçıncı zarda ne kuruldu (açılış hızı karşılaştırması) |
 
 Birden fazla maç verirsen sonda kariyer özeti de gelir: maç sayısı, galibiyet
 yüzdesi, toplam zar dağılımı ve beklenenden sapma.
+
+#### "Hırsız yüzünden hangi kaynağı alamadım"
+
+İki ayrı kalem toplanır:
+
+- **Çalınan kart** — log'da zaten açıkça yazıyor (`stole [Maden] from you`).
+- **Engellenen üretim** — log `X is blocked by the Robber. No resources produced`
+  derken **kimin** engellendiğini yazmaz, yalnız arazinin resmini koyar. Kayıtta
+  bu artık `[arazi Maden]` olarak duruyor, yani yeni maçlarda kaynak kesin.
+  Eski kayıtlarda `[?]` olduğu için sayı **çıkarımla** bulunur: aynı sayı
+  engelsiz geldiğinde o oyuncu ne alıyorsa, engelli gelişte onu alamamıştır.
+
+Çıkarım, engellenen atıştan **önceki** en son örneğe bakar. Üretim oyun boyunca
+yalnız arttığı için (köy → şehir, yeni köyler) bu bir **alt sınırdır**: "en az
+bu kadarını alamadı". Sonraki bir örneğe bakmak, arada o araziye şehir dikilmiş
+olabileceği için kaybı olduğundan büyük gösterirdi. O sayıdan hiç engelsiz
+örnek yoksa uydurulmaz, `N atış hesaplanamadı` diye yazılır.
 
 ## Panel uyarıları ne demek
 

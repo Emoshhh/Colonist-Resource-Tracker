@@ -164,14 +164,19 @@ test('log kutusu yokken çökmez', async () => {
   assert.ok(res === null || res.rows.length === 0);
 });
 
-test('kaydırıcı ilerlemezse sonsuz döngüye girmez', async () => {
+test('kaydırma hiç ilerlemese bile tarama biter', async () => {
+  // Tarama artık KENDİ hedefini yazıp ona göre ilerliyor; "scrollTop arttı mı"
+  // diye bakmıyor. Çünkü tarama sürerken log'a yeni satır düşünce colonist
+  // kutuyu en alta atıyor ve o kontrol "bitti" sanıp maçın ortasını atlıyordu.
+  // Dolayısıyla burada beklenen şey erken kırılma değil, SINIRLI sayıda adımda
+  // bitmesi: yükseklik / adım kadar.
   const { w } = makeWatcher();
   const el = { scrollHeight: 2000, clientHeight: 200, parentElement: null };
-  let locked = 0;
+  let writes = 0;
   Object.defineProperty(el, 'scrollTop', {
-    get: () => 0, // kaydırma hiç ilerlemiyor
+    get: () => 0, // eleman kaydırmayı reddediyor
     set: () => {
-      locked += 1;
+      writes += 1;
     },
   });
   Object.defineProperty(el, 'children', { get: () => [row(5, 'x rolled')] });
@@ -179,7 +184,36 @@ test('kaydırıcı ilerlemezse sonsuz döngüye girmez', async () => {
 
   const res = await w.collectAllRows(FAST);
   assert.equal(res.rows.length, 1);
-  assert.ok(locked < 10, `döngü erken kırılmalı (${locked} deneme)`);
+  // 1800px / 150px adım = 12 adım; iki geçiş + eski konuma dönüş payı.
+  assert.ok(writes <= 30, `adım sayısı sınırlı kalmalı (${writes})`);
+});
+
+test('tarama sırasında araya giren otomatik kaydırma taramayı bitirmez', async () => {
+  // Gerçek kayıp: 424 satırlık maçtan 54 satır kaydedilmişti. Sebebi, tarama
+  // sürerken gelen yeni log satırının kutuyu en alta kaydırması ve döngünün
+  // bunu "en alta geldik" sanmasıydı.
+  const { w } = makeWatcher();
+  const el = liveScroller({ total: 300 });
+  const bottom = el.scrollHeight - el.clientHeight;
+  let n = 0;
+  const realSet = Object.getOwnPropertyDescriptor(el, 'scrollTop');
+  let pos = el.scrollTop;
+  Object.defineProperty(el, 'scrollTop', {
+    get: () => pos,
+    set: (v) => {
+      pos = v;
+      n += 1;
+      // Üç kez "yeni mesaj geldi" ve kutu en alta zıpladı.
+      if (n === 4 || n === 12 || n === 20) pos = bottom;
+    },
+  });
+  void realSet;
+  w.logEl = el;
+  w.lastIndex = 299;
+
+  const res = await w.collectAllRows(FAST);
+  assert.equal(res.rows.length, 300, 'araya giren kaydırmaya rağmen tamamı toplanmalı');
+  assert.equal(res.gaps, 0);
 });
 
 /* ------------------------------------------------------------ metne çevirme */

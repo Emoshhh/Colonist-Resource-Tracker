@@ -243,6 +243,22 @@ export function partsToText(parts) {
       out.push(`[${RES_LABEL[res] || res}]`);
       continue;
     }
+
+    // Arazi altıgeni ve sayı pulu: haydut satırlarında HANGİ kaynağın
+    // üretilemediği yalnız bu resimde yazıyor. Kayda girmezse "hangi
+    // kaynağı alamadım" sorusunun cevabı tamamen kayboluyor.
+    const name = normalizeImageName(p.v) || '';
+    const tile = /^(?:generated_tile|tile|hex)[_-]?(.*)$/.exec(name);
+    if (tile) {
+      const kind = imageToResource(tile[1]);
+      out.push(kind ? `[arazi ${RES_LABEL[kind] || kind}]` : '[arazi çöl]');
+      continue;
+    }
+    const prob = /^prob[_-]?(\d+)/.exec(name);
+    if (prob) {
+      out.push(`[sayı ${prob[1]}]`);
+      continue;
+    }
     const piece = imageToBuilding(p.v);
     if (piece) {
       out.push(`[${PIECE_LABEL[piece] || piece}]`);
@@ -510,20 +526,55 @@ export class LogWatcher {
       if (sc) {
         const restore = sc.scrollTop;
         const stride = Math.max(40, Math.floor(sc.clientHeight * 0.75));
-        sc.scrollTop = 0;
-        await sleep(settle * 2);
 
-        for (let step = 0; step < maxSteps; step += 1) {
-          grab();
-          const before = sc.scrollTop;
-          const bottom = sc.scrollHeight - sc.clientHeight;
-          if (before >= bottom - 2) break;
-          sc.scrollTop = Math.min(bottom, before + stride);
-          await sleep(settle);
-          // Kaydırma ilerlemiyorsa sonsuz döngüye girmeyelim.
-          if (sc.scrollTop <= before) break;
-        }
-        grab();
+        /**
+         * Tek geçiş: en üstten en alta.
+         *
+         * Konumu HER adımda kendimiz yazıyoruz ve kırılma kararını kendi
+         * hedefimize göre veriyoruz. Sebebi gerçek bir veri kaybı: tarama
+         * sürerken log'a yeni bir satır düşünce colonist kutuyu kendiliğinden
+         * en alta kaydırıyordu; "kaydırma ilerledi mi" diye bakan eski döngü
+         * bunu "en alta geldik" sanıp duruyor ve maçın ortası hiç
+         * okunmuyordu (424 satırlık bir maçtan 54 satır kaydedilmişti).
+         */
+        const sweep = async () => {
+          let target = 0;
+          // Eleman kaydırmayı hiç kabul etmiyorsa her adımda yeniden denemek
+          // taramayı boşuna üç katına çıkarır; iki başarısız adımdan sonra bırak.
+          let stubborn = 0;
+          for (let step = 0; step < maxSteps; step += 1) {
+            sc.scrollTop = target; // araya giren otomatik kaydırmayı geri al
+            await sleep(settle);
+            // Konum tutmadıysa (yeni mesaj kutuyu en alta attıysa) o pencereyi
+            // okumadan geçmeyelim: tekrar yerine koy, sonra oku.
+            if (stubborn < 2) {
+              let retry = 0;
+              while (retry < 3 && Math.abs(sc.scrollTop - target) > 4) {
+                sc.scrollTop = target;
+                await sleep(settle);
+                retry += 1;
+              }
+              stubborn = Math.abs(sc.scrollTop - target) > 4 ? stubborn + 1 : 0;
+            }
+            grab();
+            const bottom = Math.max(0, sc.scrollHeight - sc.clientHeight);
+            if (target >= bottom) break;
+            target = Math.min(bottom, target + stride);
+          }
+        };
+
+        await sweep();
+        // Boşluk kaldıysa bir kez daha dene: satırlar geç çizilmiş olabilir.
+        const missing = () => {
+          if (!seenIdx.size) return 0;
+          const lo = Math.min(...seenIdx);
+          const hi = Math.max(...seenIdx);
+          let n = 0;
+          for (let i = lo; i <= hi; i += 1) if (!seenIdx.has(i)) n += 1;
+          return n;
+        };
+        if (missing() > 0) await sweep();
+
         sc.scrollTop = restore;
         await sleep(settle);
         grab();
