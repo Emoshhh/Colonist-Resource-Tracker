@@ -72,6 +72,8 @@ function attachRobberLoss(players, rollLog) {
     p.robberLostTotal = 0;
     p.robberBlockedRolls = 0;
     p.robberUnknown = 0;
+    p.robberTiles = {}; // "4-Buğday" -> kaç kez
+
   }
   const byName = new Map(players.map((p) => [p.name, p]));
 
@@ -121,7 +123,11 @@ function attachRobberLoss(players, rollLog) {
           lost += diff;
         }
       }
-      if (lost) p.robberBlockedRolls += 1;
+      if (lost) {
+        p.robberBlockedRolls += 1;
+        const key = r.tile ? `${r.n}-${r.tile}` : `${r.n}`;
+        p.robberTiles[key] = (p.robberTiles[key] || 0) + 1;
+      }
     }
   }
 
@@ -405,7 +411,8 @@ function matchReport(m) {
     const lost = Object.entries(p.robbedBy).map(([k, v]) => `${k} ${v}`).join(', ') || 'yok';
     out.push(
       `  ${pad(p.name.slice(0, 13), 14)} haydut ${p.robberMoves} kez · çaldı: ${stole}` +
-        ` · çalındı: ${lost} · üretimi engellendi: ${p.blocked} · 7'de attığı kart: ${p.discarded}`,
+        ` · çalındı: ${lost} · üretimi kesildi: ${p.robberBlockedRolls} atış` +
+        ` · 7'de attığı kart: ${p.discarded}`,
     );
   }
   out.push('');
@@ -433,9 +440,14 @@ function matchReport(m) {
     const detay = RES.filter((r) => p.robberLost[r])
       .map((r) => `${r} ${p.robberLost[r]}`)
       .join(', ');
+    const tiles = Object.entries(p.robberTiles)
+      .sort((a, b) => b[1] - a[1])
+      .map(([k, v]) => `${k} ×${v}`)
+      .join(', ');
     out.push(
       `  ${pad(p.name.slice(0, 13), 14)} haydut ${p.robberBlockedRolls} atışta üretimini kesti` +
         (detay ? ` — ${detay}` : ' — kayıp yok') +
+        (tiles ? ` · engellenen arazi: ${tiles}` : '') +
         (p.robberUnknown ? ` · ${p.robberUnknown} atış hesaplanamadı` : ''),
     );
   }
