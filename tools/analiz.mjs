@@ -73,6 +73,7 @@ function attachRobberLoss(players, rollLog) {
     p.robberBlockedRolls = 0;
     p.robberUnknown = 0;
     p.robberTiles = {}; // "4-Buğday" -> kaç kez
+    p.robberFallback = 0; // örneği yalnız SONRADAN bulunan atış sayısı
 
   }
   const byName = new Map(players.map((p) => [p.name, p]));
@@ -103,7 +104,9 @@ function attachRobberLoss(players, rollLog) {
         if (s.no >= r.no) continue;
         if (!best || s.no > best.no) best = s;
       }
+      let fallback = false;
       if (!best) {
+        fallback = true;
         for (const s of list) {
           if (s.no <= r.no) continue;
           if (!best || s.no < best.no) best = s;
@@ -125,6 +128,7 @@ function attachRobberLoss(players, rollLog) {
       }
       if (lost) {
         p.robberBlockedRolls += 1;
+        if (fallback) p.robberFallback += 1;
         const key = r.tile ? `${r.n}-${r.tile}` : `${r.n}`;
         p.robberTiles[key] = (p.robberTiles[key] || 0) + 1;
       }
@@ -448,6 +452,9 @@ function matchReport(m) {
       `  ${pad(p.name.slice(0, 13), 14)} haydut ${p.robberBlockedRolls} atışta üretimini kesti` +
         (detay ? ` — ${detay}` : ' — kayıp yok') +
         (tiles ? ` · engellenen arazi: ${tiles}` : '') +
+        (p.robberFallback
+          ? ` · ${p.robberFallback} atış sonraki örnekten tahmin (yüksek olabilir)`
+          : '') +
         (p.robberUnknown ? ` · ${p.robberUnknown} atış hesaplanamadı` : ''),
     );
   }

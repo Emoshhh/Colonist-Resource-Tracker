@@ -390,6 +390,16 @@ export class LogWatcher {
     this.observer = null;
   }
 
+  /**
+   * Yeni bulunan kutu aynı oyunun devamı mı?
+   * Sıra numaraları kaldığımız yerin gerisine düşmediyse evet.
+   */
+  _continuesSameGame() {
+    if (this.lastIndex < 0) return false;
+    const maxIdx = this._rows().reduce((m, r) => Math.max(m, r.idx), -1);
+    return maxIdx >= this.lastIndex - 5;
+  }
+
   _ensureLog() {
     // Mevcut kutu hâlâ sayfada mı?
     if (this.logEl && !document.contains(this.logEl)) this.logEl = null;
@@ -409,7 +419,25 @@ export class LogWatcher {
 
     this.logEl = el;
     if (this.observer) this.observer.disconnect();
-    this._reset();
+
+    /*
+     * Kutuyu yeniden bulmak "yeni oyun" demek DEĞİL.
+     *
+     * Gerçek kayıp: oyuncu bağlantısı kopup geri gelince ("has disconnected /
+     * has reconnected") colonist log kutusunu baştan oluşturuyor. Eski kod
+     * kutuyu her yeniden bulduğunda sayımı sıfırlıyordu; 92 zarlık bir maçın
+     * son 28 zarı dışındaki her şey silinmişti — eller, zar dağılımı, hepsi.
+     *
+     * Sıra numaraları kaldığımız yerden devam ediyorsa aynı oyundayız:
+     * durumu koruyup yalnız düğüm kimliklerini tazeliyoruz.
+     */
+    if (this._continuesSameGame()) {
+      // Düğümler yeni; sıra numarasız satırlar için kullanılan küme eskidi.
+      this.seen = new WeakSet();
+      this.restartStreak = 0;
+    } else {
+      this._reset();
+    }
     this.onStatus('connected');
 
     this.observer = new MutationObserver(() => this.flush());

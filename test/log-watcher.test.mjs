@@ -256,3 +256,75 @@ test('arka planda kaçan satırlar dönüşte boşluk olarak raporlanır', () =>
     assert.deepEqual(events.gaps, [31], 'kaybolan satır sayısı kesin bilinmeli');
   });
 });
+
+/* ------------------------------------------------- bağlantı kopup gelince
+ * Gerçek kayıp (Teja25 maçı): oyuncu düşüp geri bağlanınca colonist log
+ * kutusunu baştan oluşturuyor. Kod kutuyu "yeniden bulduğu" her seferde
+ * sayımı sıfırlıyordu; 92 zarlık maçın yalnız son 28 zarı sayılmıştı.
+ * Kutu değişse de sıra numaraları devam ediyorsa aynı oyundayız.
+ */
+
+/** _ensureLog gerçek document'e bakıyor; onu taklit edip gerçek kodu koştur. */
+function withFakeDocument(el, fn) {
+  const oldDoc = globalThis.document;
+  const oldMo = globalThis.MutationObserver;
+  globalThis.document = {
+    contains: (node) => node === el,
+    body: { getElementsByTagName: () => [] },
+    // findLogElement önce seçicilere bakar; kutuyu oradan versin.
+    querySelectorAll: () => [el],
+    querySelector: () => null,
+  };
+  globalThis.MutationObserver = class {
+    observe() {}
+    disconnect() {}
+  };
+  try {
+    return fn();
+  } finally {
+    globalThis.document = oldDoc;
+    globalThis.MutationObserver = oldMo;
+  }
+}
+
+test('bağlantı kopup gelince sayım sıfırlanmaz (kutu yenilense de)', () => {
+  const { w, events } = makeWatcher();
+  w.logEl = scroller({ total: 200 });
+  w.lastIndex = 199;
+
+  // colonist eski kutuyu söktü, yerine devamını koydu.
+  const yeni = scroller({ total: 206 });
+  withFakeDocument(yeni, () => {
+    w.logEl = null;
+    w._ensureLog();
+  });
+
+  assert.equal(events.resets, 0, 'aynı oyun: sıfırlama olmamalı');
+  assert.ok(w.lastIndex >= 199, `son işlenen satır korunmalı (${w.lastIndex})`);
+  assert.equal(w.logEl, yeni, 'yeni kutuya geçilmeli');
+});
+
+test('gerçekten yeni oyunda kutu yenilenince sıfırlanır', () => {
+  const { w, events } = makeWatcher();
+  w.logEl = scroller({ total: 200 });
+  w.lastIndex = 199;
+
+  const yeni = scroller({ total: 6 }); // numaralar baştan
+  withFakeDocument(yeni, () => {
+    w.logEl = null;
+    w._ensureLog();
+  });
+
+  assert.equal(events.resets, 1, 'yeni oyun: sıfırlanmalı');
+});
+
+test('_continuesSameGame eşiği: 5 satırlık sapmaya izin var', () => {
+  const { w } = makeWatcher();
+  w.lastIndex = 100;
+  w._rows = () => [{ el: {}, idx: 96 }];
+  assert.equal(w._continuesSameGame(), true, '4 satır geride: aynı oyun');
+  w._rows = () => [{ el: {}, idx: 90 }];
+  assert.equal(w._continuesSameGame(), false, '10 satır geride: yeni oyun');
+  w.lastIndex = -1;
+  assert.equal(w._continuesSameGame(), false, 'ilk bağlanışta devam yok');
+});
