@@ -379,6 +379,59 @@ function chiSquareP(x, df = 10) {
   return Math.exp(-x / 2) * sum;
 }
 
+/**
+ * Simetrik çift testi — modelden bağımsız adalet kontrolü.
+ *
+ * 5 ile 9 (ya da 4-10, 3-11, 2-12, 6-8) tam olarak aynı olasılıktadır.
+ * Bu yüzden "beklenen kaç olmalıydı" hesabına hiç girmeden, sadece ikisinin
+ * birbirine oranına bakılabilir: adil zarda 50/50 olmalı. Ki-kareden daha
+ * sezgisel ve tek bir sayıdaki sapmayı daha net gösterir.
+ *
+ * Tam binom testi kullanılıyor (normal yaklaşımı değil): sayılar küçükken
+ * yaklaşım yanıltıcı olurdu.
+ */
+function binomTwoSided(k, n) {
+  if (!n) return 1;
+  const logC = (a, b) => {
+    let r = 0;
+    for (let i = 1; i <= b; i += 1) r += Math.log(a - b + i) - Math.log(i);
+    return r;
+  };
+  const pmf = (i) => Math.exp(logC(n, i) + n * Math.log(0.5));
+  const target = pmf(k) * (1 + 1e-9);
+  let p = 0;
+  for (let i = 0; i <= n; i += 1) if (pmf(i) <= target) p += pmf(i);
+  return Math.min(1, p);
+}
+
+const PAIRS = [[2, 12], [3, 11], [4, 10], [5, 9], [6, 8]];
+
+function pairLines(rolls) {
+  const out = ['', 'SİMETRİK ÇİFT TESTİ (aynı olasılıktaki sayılar eşit gelmeli)'];
+  out.push(pad('çift', 10) + num('sol', 5) + num('sağ', 6) + num('toplam', 8) + num('p', 9));
+  const ps = [];
+  for (const [a, b] of PAIRS) {
+    const x = rolls[a];
+    const y = rolls[b];
+    const n = x + y;
+    const pv = binomTwoSided(x, n);
+    ps.push(pv);
+    out.push(
+      pad(`${a}-${b}`, 10) + num(x, 5) + num(y, 6) + num(n, 8) + num(pv.toFixed(3), 9) +
+        (pv < 0.05 ? '  <-- sapma' : ''),
+    );
+  }
+  // Beş çifte birden bakıldığı için en uçtaki p'yi düzeltmek şart:
+  // yoksa "bir tanesi düşük çıktı" diye her seferinde yanlış alarm verilir.
+  const en = Math.min(...ps);
+  const duz = 1 - (1 - en) ** PAIRS.length;
+  out.push(
+    `en uç çift p=${en.toFixed(3)} · 5 çifte birden bakıldığı için düzeltilmiş p=${duz.toFixed(3)}` +
+      (duz < 0.05 ? '  -> GERÇEKTEN SAPMA VAR' : '  -> şans eseri olabilir'),
+  );
+  return out;
+}
+
 /** "9.7 (p=0.47 · normal)" gibi okunur bir sapma hücresi. */
 function luckText(p) {
   const chi = diceLuck(p);
@@ -419,6 +472,10 @@ function matchReport(m) {
   }
   const exp = [...Array(11)].map((_, i) => (P[i + 2] * m.rollNo).toFixed(1));
   out.push(pad('beklenen', 14) + exp.map((v) => num(v, 5)).join('') + num(m.rollNo, 6));
+
+  const toplam = Array(13).fill(0);
+  for (const p of m.players) for (let n = 2; n <= 12; n += 1) toplam[n] += p.rolls[n];
+  out.push(...pairLines(toplam));
   out.push('');
 
   // --- üretim
@@ -589,6 +646,7 @@ function careerReport(matches) {
   out.push(pad('', 14) + [...Array(11)].map((_, i) => num(i + 2, 6)).join(''));
   out.push(pad('gerçek', 14) + tot.slice(2, 13).map((v) => num(v, 6)).join(''));
   out.push(pad('beklenen', 14) + [...Array(11)].map((_, i) => num((P[i + 2] * n).toFixed(1), 6)).join(''));
+  out.push(...pairLines(tot));
   return out.join('\n');
 }
 

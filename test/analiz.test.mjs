@@ -6,7 +6,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parseMatch } from '../tools/analiz.mjs';
+import { parseMatch, matchReport } from '../tools/analiz.mjs';
 
 const LOG = `# colonist maç kaydı — 06.11.2026 01:19:54
 # oyuncular: FFILHO, Emosh
@@ -166,4 +166,46 @@ Veli              0  1  3  4  3  4  2  1  1  1  0    20
   assert.equal(r.bodyRolls, 1);
   assert.equal(r.rollNo, 40);
   assert.equal(r.players.find((p) => p.name === 'Ali').rolls[6], 4);
+});
+
+/* ------------------------------------------------- simetrik çift testi
+ * 5 ile 9 aynı olasılıkta; "beklenen" modeline hiç girmeden ikisinin
+ * oranına bakmak en sezgisel adalet testi. Rapor metninden doğruluyoruz.
+ */
+test('simetrik çift testi rapora giriyor ve sapmayı işaretliyor', () => {
+  // 9 hiç gelmemiş, 5 bolca gelmiş: çift testi bunu yakalamalı.
+  const satirlar = [];
+  for (let i = 0; i < 25; i += 1) {
+    satirlar.push(`[${100 + i * 2}] Ali rolled [zar 1] [zar 4]`); // 5
+  }
+  const log = `# colonist maç kaydı — 01.01.2026 00:00:00
+# oyuncular: Ali, Veli
+# ben: Veli
+
+--- log ---
+${satirlar.join('\n')}
+`;
+  const m = parseMatch(log, 'cift');
+  const metin = matchReport(m);
+  assert.match(metin, /SİMETRİK ÇİFT TESTİ/);
+  assert.match(metin, /5-9\s+25\s+0\s+25/, '5-9 satırı 25-0 olmalı');
+  assert.match(metin, /GERÇEKTEN SAPMA VAR/, '25-0 düzeltmeden sonra da sapma sayılmalı');
+});
+
+test('dengeli zarda çift testi sapma demiyor', () => {
+  const satirlar = [];
+  for (let i = 0; i < 10; i += 1) {
+    satirlar.push(`[${100 + i * 4}] Ali rolled [zar 1] [zar 4]`); // 5
+    satirlar.push(`[${102 + i * 4}] Veli rolled [zar 4] [zar 5]`); // 9
+  }
+  const log = `# colonist maç kaydı — 01.01.2026 00:00:00
+# oyuncular: Ali, Veli
+# ben: Veli
+
+--- log ---
+${satirlar.join('\n')}
+`;
+  const metin = matchReport(parseMatch(log, 'cift2'));
+  assert.match(metin, /şans eseri olabilir/);
+  assert.doesNotMatch(metin, /GERÇEKTEN SAPMA VAR/);
 });
