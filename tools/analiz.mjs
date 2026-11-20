@@ -347,9 +347,8 @@ const num = (s, n) => String(s).padStart(n);
 const P = [0, 0, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1].map((x) => x / 36);
 
 /**
- * Zar şansı: attığın zarlar beklenenden ne kadar saptı?
- * Her sayı için (gerçek - beklenen), karesi/beklenen toplanır (ki-kare).
- * Büyük değer = dağılım beklenenden uzak; yön için 7 ve uç sayılara bakılır.
+ * Zar şansı: attığın zarlar beklenenden ne kadar saptı? (ki-kare)
+ * Büyük değer = dağılım beklenenden uzak.
  */
 function diceLuck(p) {
   if (!p.rollCount) return null;
@@ -359,6 +358,34 @@ function diceLuck(p) {
     chi += ((p.rolls[n] - exp) ** 2) / exp;
   }
   return chi;
+}
+
+/**
+ * Ki-kare üst kuyruk olasılığı (çift serbestlik derecesi için kapalı form).
+ * 10 serbestlik derecesi = 11 olası sayı - 1.
+ *
+ * Bu sayı olmadan "sapma 9.7" hiçbir şey ifade etmiyor. p, "zar gerçekten
+ * adilse bu kadar veya daha çarpık bir dağılım görme olasılığı" demek:
+ * 0.50 gayet normal, 0.05'in altı "şüphelen" eşiği.
+ */
+function chiSquareP(x, df = 10) {
+  if (!Number.isFinite(x) || x < 0) return null;
+  let sum = 0;
+  let term = 1;
+  for (let k = 0; k < df / 2; k += 1) {
+    if (k) term *= x / 2 / k;
+    sum += term;
+  }
+  return Math.exp(-x / 2) * sum;
+}
+
+/** "9.7 (p=0.47 · normal)" gibi okunur bir sapma hücresi. */
+function luckText(p) {
+  const chi = diceLuck(p);
+  if (chi === null) return '-';
+  const pv = chiSquareP(chi);
+  const yorum = pv < 0.01 ? 'ÇOK ŞÜPHELİ' : pv < 0.05 ? 'şüpheli' : 'normal';
+  return `${chi.toFixed(1)} (p=${pv.toFixed(2)} ${yorum})`;
 }
 
 function matchReport(m) {
@@ -387,8 +414,7 @@ function matchReport(m) {
     out.push(
       pad(p.name.slice(0, 13), 14) +
         p.rolls.slice(2, 13).map((v) => num(v, 5)).join('') +
-        num(p.rollCount, 6) +
-        num(diceLuck(p) ? diceLuck(p).toFixed(1) : '-', 8),
+        num(p.rollCount, 6) + '  ' + luckText(p),
     );
   }
   const exp = [...Array(11)].map((_, i) => (P[i + 2] * m.rollNo).toFixed(1));
@@ -527,7 +553,7 @@ function careerReport(matches) {
       }
     }
   }
-  out.push(pad('oyuncu', 14) + num('maç', 5) + num('galip', 7) + num('%', 7) + num('zar', 7) + num('7', 5) + num('üretim', 9) + num('sapma', 8));
+  out.push(pad('oyuncu', 14) + num('maç', 5) + num('galip', 7) + num('%', 7) + num('zar', 7) + num('7', 5) + num('üretim', 9) + '  ' + 'sapma (p)');
   for (const a of [...all.values()].sort((x, y) => y.maç - x.maç)) {
     out.push(
       pad(a.name.slice(0, 13), 14) +
@@ -536,8 +562,7 @@ function careerReport(matches) {
         num(a.maç ? Math.round((a.galibiyet / a.maç) * 100) : 0, 7) +
         num(a.rollCount, 7) +
         num(a.rolls[7], 5) +
-        num(a.gainedTotal, 9) +
-        num(diceLuck(a) ? diceLuck(a).toFixed(1) : '-', 8),
+        num(a.gainedTotal, 9) + '  ' + luckText(a),
     );
   }
   out.push('');
