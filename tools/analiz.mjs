@@ -553,8 +553,12 @@ function matchReport(m) {
     const byRate = {};
     for (const t of p.trades) {
       const kind = [...new Set(t.verdi)].join('+');
-      const rate = `${t.verdi.length / Math.max(1, t.aldi.length)}:1 ${kind}`;
-      byRate[rate] = (byRate[rate] || 0) + 1;
+      const ver = t.verdi.length;
+      const al = Math.max(1, t.aldi.length);
+      // Tam bölünmeyen takaslar (ör. 8 kart verip 3 almak) "2.666:1" diye
+      // yazılıyordu; o durumda ham sayıları göstermek daha okunur.
+      const rate = ver % al === 0 ? `${ver / al}:1` : `${ver}:${al}`;
+      byRate[`${rate} ${kind}`] = (byRate[`${rate} ${kind}`] || 0) + 1;
     }
     const detail = Object.entries(byRate)
       .sort((a, b) => b[1] - a[1])
