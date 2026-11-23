@@ -209,3 +209,47 @@ ${satirlar.join('\n')}
   assert.match(metin, /şans eseri olabilir/);
   assert.doesNotMatch(metin, /GERÇEKTEN SAPMA VAR/);
 });
+
+/* --------------------------------------------------------- karma sistemi
+ * Colonist'in "karma" sistemi zarları gerçek rastgeleden daha dengeli
+ * dağıtıyor; açık mı kapalı mı olduğu zar analizinin yorumunu değiştirir.
+ */
+test('karma oylaması reddedilince sistem açık sayılır', () => {
+  const log = `# colonist maç kaydı — 01.01.2026 00:00:00
+# oyuncular: Ali, Veli
+# ben: Veli
+
+--- log ---
+[  18] Ali started a vote to disable karma
+[  19] Karma System: vote to disable karma declined
+[  23] Ali rolled [zar 2] [zar 2]
+`;
+  const m = parseMatch(log, 'karma');
+  assert.match(m.karma, /^açık/);
+  assert.match(matchReport(m), /karma .*açık/);
+});
+
+test('karma kapatılırsa öyle yazılır', () => {
+  const log = `# colonist maç kaydı — 01.01.2026 00:00:00
+# oyuncular: Ali, Veli
+# ben: Veli
+
+--- log ---
+[  19] Karma System: vote to disable karma passed
+[  23] Ali rolled [zar 2] [zar 2]
+`;
+  assert.match(parseMatch(log, 'karma2').karma, /KAPALI/);
+});
+
+test('karma satırı yoksa null kalır, rapora yazılmaz', () => {
+  const log = `# colonist maç kaydı — 01.01.2026 00:00:00
+# oyuncular: Ali, Veli
+# ben: Veli
+
+--- log ---
+[  23] Ali rolled [zar 2] [zar 2]
+`;
+  const m = parseMatch(log, 'karma3');
+  assert.equal(m.karma, null);
+  assert.doesNotMatch(matchReport(m), /karma/i);
+});

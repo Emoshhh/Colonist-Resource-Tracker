@@ -164,6 +164,7 @@ export function parseMatch(text, fileName = '') {
   const asName = (n) => (/^you$/i.test(n) ? me : n);
 
   let winner = null;
+  let karma = null; // colonist'in zar dengeleme sistemi açık mı?
   let rollNo = 0;
   let lastRoller = null;
   // Her zar atışı için kimin ne ürettiği: haydudun engellediği üretimi
@@ -287,6 +288,20 @@ export function parseMatch(text, fileName = '') {
       continue;
     }
 
+    /*
+     * Colonist'in "karma" sistemi zarları gerçek rastgeleden daha dengeli
+     * dağıtıyor. Açık mı kapalı mı olduğu zar analizinin yorumunu değiştirir,
+     * o yüzden oylama satırları takip ediliyor.
+     */
+    if (/vote to disable karma declined/i.test(line)) {
+      karma = 'açık (devre dışı bırakma oylaması reddedildi)';
+      continue;
+    }
+    if (/karma (?:disabled|is off)/i.test(line) || /vote to disable karma (?:passed|accepted)/i.test(line)) {
+      karma = 'KAPALI (oylama kabul edildi)';
+      continue;
+    }
+
     if ((g = /(.+?) won the game/.exec(line))) {
       winner = g[1].replace(/\[\?\]/g, '').trim();
       continue;
@@ -330,6 +345,7 @@ export function parseMatch(text, fileName = '') {
     file: fileName,
     me,
     winner,
+    karma,
     rollNo: totalRolls,
     bodyRolls,
     partial: headerRolls > 0,
@@ -451,6 +467,7 @@ function matchReport(m) {
       (m.winner ? `  ·  kazanan: ${m.winner}` : '  ·  kazanan: (log\'da yok)') +
       `  ·  ${m.rollNo} zar`,
   );
+  if (m.karma) out.push(`karma (colonist'in zar dengeleme sistemi): ${m.karma}`);
   if (m.partial) {
     out.push(
       `⚠ LOG EKSİK: kayıtta ${m.bodyRolls} zarlık bölüm var, maç ${m.rollNo} zar sürmüş.` +
